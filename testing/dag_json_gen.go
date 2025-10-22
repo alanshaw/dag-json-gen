@@ -64,29 +64,18 @@ func (t *SignedArray) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = SignedArray{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Signed ([]uint64) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -117,18 +106,19 @@ func (t *SignedArray) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Signed[i] = uint64(extra)
+				t.Signed[i] = uint64(nval)
 
 			}
 
 		}
+	}
+
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -264,52 +254,55 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = SimpleTypeOne{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 6 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Foo (string) (string)
 
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 8192)
+		sval, err := jr.ReadString(8192)
 		if err != nil {
 			return err
 		}
-
 		t.Foo = string(sval)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 6")
+		}
 	}
 	// t.Value (uint64) (uint64)
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		t.Value = uint64(extra)
+		t.Value = uint64(nval)
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 6")
+		}
 	}
 	// t.Binary ([]uint8) (slice)
 
@@ -333,40 +326,52 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	// t.Signed (int64) (int64)
 	{
-		maj, extra, err := cr.ReadHeader()
+		end, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		if end {
+			return fmt.Errorf("json input has too few fields 3 < 6")
 		}
+	}
+	// t.Signed (int64) (int64)
 
-		t.Signed = int64(extraI)
+	{
+
+		nval, err := jr.ReadNumberAsInt64()
+		if err != nil {
+			return err
+		}
+		t.Signed = int64(nval)
+
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 4 < 6")
+		}
 	}
 	// t.NString (testing.NamedString) (string)
 
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 8192)
+		sval, err := jr.ReadString(8192)
 		if err != nil {
 			return err
 		}
-
 		t.NString = NamedString(sval)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 5 < 6")
+		}
 	}
 	// t.Strings ([]string) (slice)
 
@@ -397,15 +402,18 @@ func (t *SimpleTypeOne) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = err
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Strings[i] = string(sval)
 			}
 
 		}
+	}
+
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -645,47 +653,46 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = SimpleTypeTwo{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 9 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
 
 	{
 
-		b, err := cr.ReadByte()
+		null, err := jr.PeekNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
+		if null {
+			if err := jr.ReadNull(); err != nil {
 				return err
 			}
+		} else {
 			t.Stuff = new(SimpleTypeTwo)
-			if err := t.Stuff.UnmarshalCBOR(cr); err != nil {
+			if err := t.Stuff.UnmarshalCBOR(jr); err != nil {
 				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 9")
+		}
 	}
 	// t.Others ([]uint64) (slice)
 
@@ -717,17 +724,24 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Others[i] = uint64(extra)
+				t.Others[i] = uint64(nval)
 
 			}
 
+		}
+	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 9")
 		}
 	}
 	// t.SignedOthers ([]int64) (slice)
@@ -757,31 +771,27 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = maj
 			_ = extra
 			_ = err
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.SignedOthers[i] = int64(nval)
 
-				t.SignedOthers[i] = int64(extraI)
 			}
 
+		}
+	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 3 < 9")
 		}
 	}
 	// t.Test ([][]uint8) (slice)
@@ -834,15 +844,33 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 		}
 	}
-	// t.Dog (string) (string)
 
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 8192)
+		end, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
+		if end {
+			return fmt.Errorf("json input has too few fields 4 < 9")
+		}
+	}
+	// t.Dog (string) (string)
 
+	{
+		sval, err := jr.ReadString(8192)
+		if err != nil {
+			return err
+		}
 		t.Dog = string(sval)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 5 < 9")
+		}
 	}
 	// t.Numbers ([]testing.NamedNumber) (slice)
 
@@ -874,66 +902,71 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Numbers[i] = NamedNumber(extra)
+				t.Numbers[i] = NamedNumber(nval)
 
 			}
 
+		}
+	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 6 < 9")
 		}
 	}
 	// t.Pizza (uint64) (uint64)
 
 	{
 
-		b, err := cr.ReadByte()
+		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-			maj, extra, err = cr.ReadHeader()
-			if err != nil {
-				return err
-			}
-			if maj != cbg.MajUnsignedInt {
-				return fmt.Errorf("wrong type for uint64 field")
-			}
-			typed := uint64(extra)
+		if nval != nil {
+			typed := uint64(*nval)
 			t.Pizza = &typed
 		}
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 7 < 9")
+		}
 	}
 	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	{
 
-		b, err := cr.ReadByte()
+		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-			maj, extra, err = cr.ReadHeader()
-			if err != nil {
-				return err
-			}
-			if maj != cbg.MajUnsignedInt {
-				return fmt.Errorf("wrong type for uint64 field")
-			}
-			typed := NamedNumber(extra)
+		if nval != nil {
+			typed := NamedNumber(*nval)
 			t.PointyPizza = &typed
 		}
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 8 < 9")
+		}
 	}
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
@@ -965,7 +998,7 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				if err := t.Arrrrrghay[i].UnmarshalCBOR(cr); err != nil {
+				if err := t.Arrrrrghay[i].UnmarshalCBOR(jr); err != nil {
 					return fmt.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
 				}
 
@@ -973,6 +1006,9 @@ func (t *SimpleTypeTwo) UnmarshalCBOR(r io.Reader) (err error) {
 		}
 	}
 
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1019,71 +1055,79 @@ func (t *DeferredContainer) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *DeferredContainer) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = DeferredContainer{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 3 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Stuff (testing.SimpleTypeOne) (struct)
 
 	{
 
-		b, err := cr.ReadByte()
+		null, err := jr.PeekNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
+		if null {
+			if err := jr.ReadNull(); err != nil {
 				return err
 			}
+		} else {
 			t.Stuff = new(SimpleTypeOne)
-			if err := t.Stuff.UnmarshalCBOR(cr); err != nil {
+			if err := t.Stuff.UnmarshalCBOR(jr); err != nil {
 				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
 
 	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 3")
+		}
+	}
 	// t.Deferred (typegen.Deferred) (struct)
 
 	{
 
-		t.Deferred = new(cbg.Deferred)
+		t.Deferred = new(jsg.Deferred)
 
-		if err := t.Deferred.UnmarshalCBOR(cr); err != nil {
+		if err := t.Deferred.UnmarshalCBOR(jr); err != nil {
 			return fmt.Errorf("failed to read deferred field: %w", err)
+		}
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
 	// t.Value (uint64) (uint64)
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		t.Value = uint64(extra)
+		t.Value = uint64(nval)
 
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1166,29 +1210,18 @@ func (t *FixedArrays) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = FixedArrays{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 3 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Bytes ([20]uint8) (array)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1210,6 +1243,16 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	if _, err := io.ReadFull(cr, t.Bytes[:]); err != nil {
 		return err
 	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 3")
+		}
+	}
 	// t.Uint8 ([20]uint8) (array)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1230,6 +1273,16 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 	t.Uint8 = [20]uint8{}
 	if _, err := io.ReadFull(cr, t.Uint8[:]); err != nil {
 		return err
+	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 3")
+		}
 	}
 	// t.Uint64 ([20]uint64) (array)
 
@@ -1261,19 +1314,19 @@ func (t *FixedArrays) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Uint64[i] = uint64(extra)
+				t.Uint64[i] = uint64(nval)
 
 			}
 		}
 	}
 
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1329,72 +1382,67 @@ func (t *ThingWithSomeTime) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *ThingWithSomeTime) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = ThingWithSomeTime{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 3 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.When (typegen.DagJsonTime) (struct)
 
 	{
 
-		if err := t.When.UnmarshalCBOR(cr); err != nil {
+		if err := t.When.UnmarshalCBOR(jr); err != nil {
 			return fmt.Errorf("unmarshaling t.When: %w", err)
 		}
 
 	}
-	// t.Stuff (int64) (int64)
 	{
-		maj, extra, err := cr.ReadHeader()
+		end, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
+	}
+	// t.Stuff (int64) (int64)
 
-		t.Stuff = int64(extraI)
+	{
+
+		nval, err := jr.ReadNumberAsInt64()
+		if err != nil {
+			return err
+		}
+		t.Stuff = int64(nval)
+
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 3")
+		}
 	}
 	// t.CatName (string) (string)
 
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 8192)
+		sval, err := jr.ReadString(8192)
 		if err != nil {
 			return err
 		}
-
 		t.CatName = string(sval)
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1429,29 +1477,18 @@ func (t *BigField) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = BigField{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.LargeBytes ([]uint8) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1474,6 +1511,9 @@ func (t *BigField) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1521,29 +1561,18 @@ func (t *IntArray) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArray{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Ints ([]int64) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1571,32 +1600,22 @@ func (t *IntArray) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = maj
 			_ = extra
 			_ = err
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Ints[i] = int64(nval)
 
-				t.Ints[i] = int64(extraI)
 			}
 
 		}
+	}
+
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1645,29 +1664,18 @@ func (t *IntAliasArray) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntAliasArray{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Ints ([]testing.IntAlias) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -1695,32 +1703,22 @@ func (t *IntAliasArray) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = maj
 			_ = extra
 			_ = err
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Ints[i] = IntAlias(nval)
 
-				t.Ints[i] = IntAlias(extraI)
 			}
 
 		}
+	}
+
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1779,103 +1777,71 @@ func (t *TupleIntArray) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *TupleIntArray) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = TupleIntArray{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 3 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Int1 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int1 = int64(nval)
 
-		t.Int1 = int64(extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 3")
+		}
 	}
 	// t.Int2 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int2 = int64(nval)
 
-		t.Int2 = int64(extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 3")
+		}
 	}
 	// t.Int3 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int3 = int64(nval)
 
-		t.Int3 = int64(extraI)
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1958,126 +1924,97 @@ func (t *TupleIntArrayOptionals) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *TupleIntArrayOptionals) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = TupleIntArrayOptionals{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 4 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Int1 (int64) (int64)
+
 	{
 
-		b, err := cr.ReadByte()
+		nval, err := jr.ReadNumberAsInt64OrNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-			maj, extra, err := cr.ReadHeader()
-			if err != nil {
-				return err
-			}
-			var extraI int64
-			switch maj {
-			case cbg.MajUnsignedInt:
-				extraI = int64(extra)
-				if extraI < 0 {
-					return fmt.Errorf("int64 positive overflow")
-				}
-			case cbg.MajNegativeInt:
-				extraI = int64(extra)
-				if extraI < 0 {
-					return fmt.Errorf("int64 negative overflow")
-				}
-				extraI = -1 - extraI
-			default:
-				return fmt.Errorf("wrong type for int64 field: %d", maj)
-			}
+		if nval != nil {
+			typed := int64(*nval)
+			t.Int1 = &typed
+		}
 
-			t.Int1 = (*int64)(&extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 4")
 		}
 	}
 	// t.Int2 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int2 = int64(nval)
 
-		t.Int2 = int64(extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 4")
+		}
 	}
 	// t.Int3 (uint64) (uint64)
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		t.Int3 = uint64(extra)
+		t.Int3 = uint64(nval)
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 3 < 4")
+		}
 	}
 	// t.Int4 (uint64) (uint64)
 
 	{
 
-		b, err := cr.ReadByte()
+		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
 			return err
 		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-			maj, extra, err = cr.ReadHeader()
-			if err != nil {
-				return err
-			}
-			if maj != cbg.MajUnsignedInt {
-				return fmt.Errorf("wrong type for uint64 field")
-			}
-			typed := uint64(extra)
+		if nval != nil {
+			typed := uint64(*nval)
 			t.Int4 = &typed
 		}
 
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -2122,14 +2059,10 @@ func (t *IntArrayNewType) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArrayNewType{}
 
-	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
+	jr := jsg.NewDagJsonReader(r)
 	// (*t) (testing.IntArrayNewType) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -2157,33 +2090,20 @@ func (t *IntArrayNewType) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = maj
 			_ = extra
 			_ = err
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				(*t)[i] = int64(nval)
 
-				(*t)[i] = int64(extraI)
 			}
 
 		}
 	}
+
 	return nil
 }
 
@@ -2227,14 +2147,10 @@ func (t *IntArrayAliasNewType) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArrayAliasNewType{}
 
-	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
+	jr := jsg.NewDagJsonReader(r)
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -2262,33 +2178,20 @@ func (t *IntArrayAliasNewType) UnmarshalCBOR(r io.Reader) (err error) {
 			_ = maj
 			_ = extra
 			_ = err
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				(*t)[i] = IntAlias(nval)
 
-				(*t)[i] = IntAlias(extraI)
 			}
 
 		}
 	}
+
 	return nil
 }
 
@@ -2363,14 +2266,10 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = MapTransparentType{}
 
-	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
+	jr := jsg.NewDagJsonReader(r)
 	// (*t) (testing.MapTransparentType) (map)
 
 	maj, extra, err = cr.ReadHeader()
@@ -2391,28 +2290,25 @@ func (t *MapTransparentType) UnmarshalCBOR(r io.Reader) (err error) {
 		var k string
 
 		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
+			sval, err := jr.ReadString(8192)
 			if err != nil {
 				return err
 			}
-
 			k = string(sval)
 		}
-
 		var v string
 
 		{
-			sval, err := cbg.ReadStringWithMax(cr, 8192)
+			sval, err := jr.ReadString(8192)
 			if err != nil {
 				return err
 			}
-
 			v = string(sval)
 		}
-
 		(*t)[k] = v
 
 	}
+
 	return nil
 }
 
@@ -2446,61 +2342,29 @@ func (t *BigIntContainer) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *BigIntContainer) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = BigIntContainer{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Int (big.Int) (struct)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajTag || extra != 2 {
-		return fmt.Errorf("big ints should be cbor bignums")
-	}
-
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("big ints should be tagged cbor byte strings")
-	}
-
-	if extra > 256 {
-		return fmt.Errorf("t.Int: cbor bignum was too large")
-	}
-
-	if extra > 0 {
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(cr, buf); err != nil {
+	{
+		nval, err := jr.ReadNumberAsBigInt(256)
+		if err != nil {
 			return err
 		}
-		t.Int = big.NewInt(0).SetBytes(buf)
-	} else {
-		t.Int = big.NewInt(0)
+		t.Int = nval
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -2574,117 +2438,91 @@ func (t *TupleWithOptionalFields) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *TupleWithOptionalFields) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = TupleWithOptionalFields{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 4 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Int1 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int1 = int64(nval)
 
-		t.Int1 = int64(extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 4")
+		}
 	}
 	// t.Uint2 (uint64) (uint64)
 
 	{
 
-		maj, extra, err = cr.ReadHeader()
+		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		t.Uint2 = uint64(extra)
+		t.Uint2 = uint64(nval)
 
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 4")
+		}
 	}
 	// t.Int3 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int3 = int64(nval)
 
-		t.Int3 = int64(extraI)
+	}
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 3 < 4")
+		}
 	}
 	// t.Int4 (int64) (int64)
+
 	{
-		maj, extra, err := cr.ReadHeader()
+
+		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
 			return err
 		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
+		t.Int4 = int64(nval)
 
-		t.Int4 = int64(extraI)
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }

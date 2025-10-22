@@ -48,38 +48,29 @@ func (t *LongString) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *LongString) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = LongString{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 1 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Val (string) (string)
 
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 10000)
+		sval, err := jr.ReadString(10000)
 		if err != nil {
 			return err
 		}
-
 		t.Val = string(sval)
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }

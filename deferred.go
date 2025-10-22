@@ -3,7 +3,6 @@ package typegen
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"sync"
 )
@@ -40,7 +39,7 @@ func (d *Deferred) UnmarshalDagJSON(br io.Reader) (err error) {
 	}()
 
 	// Allocate some scratch space.
-	scratch := make([]byte, maxHeaderSize)
+	// scratch := make([]byte, maxHeaderSize)
 
 	hasReadOnce := false
 	defer func() {
@@ -58,51 +57,51 @@ func (d *Deferred) UnmarshalDagJSON(br io.Reader) (err error) {
 	// 5. While "remaining" is non-zero, read more elements.
 
 	// define this once so we don't keep allocating it.
-	limitedReader := io.LimitedReader{R: br}
-	for remaining := uint64(1); remaining > 0; remaining-- {
-		maj, extra, err := CborReadHeaderBuf(br, scratch)
-		if err != nil {
-			return err
-		}
-		hasReadOnce = true
-		if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
-			return err
-		}
+	// limitedReader := io.LimitedReader{R: br}
+	// for remaining := uint64(1); remaining > 0; remaining-- {
+	// 	maj, extra, err := CborReadHeaderBuf(br, scratch)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	hasReadOnce = true
+	// 	if err := WriteMajorTypeHeaderBuf(scratch, buf, maj, extra); err != nil {
+	// 		return err
+	// 	}
 
-		switch maj {
-		case MajUnsignedInt, MajNegativeInt, MajOther:
-			// nothing fancy to do
-		case MajByteString, MajTextString:
-			if extra > ByteArrayMaxLen {
-				return errMaxLength
-			}
-			// Copy the bytes
-			limitedReader.N = int64(extra)
-			buf.Grow(int(extra))
-			if n, err := buf.ReadFrom(&limitedReader); err != nil {
-				return err
-			} else if n < int64(extra) {
-				return io.ErrUnexpectedEOF
-			}
-		case MajTag:
-			remaining++
-		case MajArray:
-			if extra > MaxLength {
-				return errMaxLength
-			}
-			remaining += extra
-		case MajMap:
-			if extra > MaxLength {
-				return errMaxLength
-			}
-			remaining += extra * 2
-		default:
-			return fmt.Errorf("unhandled deferred cbor type: %d", maj)
-		}
-	}
-	// Reuse existing buffer. Also, copy to "give back" the allocation in the byte buffer (which
-	// is likely significant).
-	d.Raw = d.Raw[:0]
-	d.Raw = append(d.Raw, buf.Bytes()...)
+	// 	switch maj {
+	// 	case MajUnsignedInt, MajNegativeInt, MajOther:
+	// 		// nothing fancy to do
+	// 	case MajByteString, MajTextString:
+	// 		if extra > ByteArrayMaxLen {
+	// 			return errMaxLength
+	// 		}
+	// 		// Copy the bytes
+	// 		limitedReader.N = int64(extra)
+	// 		buf.Grow(int(extra))
+	// 		if n, err := buf.ReadFrom(&limitedReader); err != nil {
+	// 			return err
+	// 		} else if n < int64(extra) {
+	// 			return io.ErrUnexpectedEOF
+	// 		}
+	// 	case MajTag:
+	// 		remaining++
+	// 	case MajArray:
+	// 		if extra > MaxLength {
+	// 			return errMaxLength
+	// 		}
+	// 		remaining += extra
+	// 	case MajMap:
+	// 		if extra > MaxLength {
+	// 			return errMaxLength
+	// 		}
+	// 		remaining += extra * 2
+	// 	default:
+	// 		return fmt.Errorf("unhandled deferred cbor type: %d", maj)
+	// 	}
+	// }
+	// // Reuse existing buffer. Also, copy to "give back" the allocation in the byte buffer (which
+	// // is likely significant).
+	// d.Raw = d.Raw[:0]
+	// d.Raw = append(d.Raw, buf.Bytes()...)
 	return nil
 }

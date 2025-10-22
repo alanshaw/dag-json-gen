@@ -99,29 +99,18 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
+func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = LimitedStruct{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	jr := jsg.NewDagJsonReader(r)
 	defer func() {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
 	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return err
 	}
-
-	if extra != 3 {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-
 	// t.Arr ([]uint64) (slice)
 
 	maj, extra, err = cr.ReadHeader()
@@ -152,17 +141,24 @@ func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.Arr[i] = uint64(extra)
+				t.Arr[i] = uint64(nval)
 
 			}
 
+		}
+	}
+
+	{
+		end, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if end {
+			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
 	// t.Byts ([]uint8) (slice)
@@ -187,15 +183,26 @@ func (t *LimitedStruct) UnmarshalCBOR(r io.Reader) (err error) {
 		return err
 	}
 
-	// t.Str (string) (string)
-
 	{
-		sval, err := cbg.ReadStringWithMax(cr, 8)
+		end, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
+		if end {
+			return fmt.Errorf("json input has too few fields 2 < 3")
+		}
+	}
+	// t.Str (string) (string)
 
+	{
+		sval, err := jr.ReadString(8)
+		if err != nil {
+			return err
+		}
 		t.Str = string(sval)
+	}
+	if err := jr.ReadArrayClose(); err != nil {
+		return err
 	}
 	return nil
 }

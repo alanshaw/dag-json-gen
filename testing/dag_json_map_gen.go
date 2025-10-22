@@ -402,14 +402,12 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Dog":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Dog = string(sval)
-			}
-			// t.Test ([][]uint8) (slice)
+			} // t.Test ([][]uint8) (slice)
 		case "Test":
 
 			maj, extra, err = cr.ReadHeader()
@@ -465,22 +463,22 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				b, err := cr.ReadByte()
+				null, err := jr.PeekNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
+				if null {
+					if err := jr.ReadNull(); err != nil {
 						return err
 					}
+				} else {
 					t.Stuff = new(SimpleTypeTree)
-					if err := t.Stuff.UnmarshalCBOR(cr); err != nil {
+					if err := t.Stuff.UnmarshalCBOR(jr); err != nil {
 						return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 					}
 				}
 
-			}
-			// t.Others ([]uint64) (slice)
+			} // t.Others ([]uint64) (slice)
 		case "Others":
 
 			maj, extra, err = cr.ReadHeader()
@@ -511,14 +509,11 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						maj, extra, err = cr.ReadHeader()
+						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
 							return err
 						}
-						if maj != cbg.MajUnsignedInt {
-							return fmt.Errorf("wrong type for uint64 field")
-						}
-						t.Others[i] = uint64(extra)
+						t.Others[i] = uint64(nval)
 
 					}
 
@@ -529,22 +524,22 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				b, err := cr.ReadByte()
+				null, err := jr.PeekNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
+				if null {
+					if err := jr.ReadNull(); err != nil {
 						return err
 					}
+				} else {
 					t.Stufff = new(SimpleTypeTwo)
-					if err := t.Stufff.UnmarshalCBOR(cr); err != nil {
+					if err := t.Stufff.UnmarshalCBOR(jr); err != nil {
 						return fmt.Errorf("unmarshaling t.Stufff pointer: %w", err)
 					}
 				}
 
-			}
-			// t.BoolPtr (bool) (bool)
+			} // t.BoolPtr (bool) (bool)
 		case "BoolPtr":
 
 			{
@@ -582,74 +577,38 @@ func (t *SimpleTypeTree) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				b, err := cr.ReadByte()
+				nval, err := jr.ReadNumberAsUint64OrNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
-					maj, extra, err = cr.ReadHeader()
-					if err != nil {
-						return err
-					}
-					if maj != cbg.MajUnsignedInt {
-						return fmt.Errorf("wrong type for uint64 field")
-					}
-					typed := uint64(extra)
+				if nval != nil {
+					typed := uint64(*nval)
 					t.NotPizza = &typed
 				}
 
-			}
-			// t.StringPtr (string) (string)
+			} // t.StringPtr (string) (string)
 		case "StringPtr":
 
 			{
-				b, err := cr.ReadByte()
+				sval, err := jr.ReadStringOrNull(8192)
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
-
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
-					if err != nil {
-						return err
-					}
-
-					t.StringPtr = (*string)(&sval)
+				if s != nil {
+					t.StringPtr = (*string)(sval)
 				}
-			}
-			// t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
+			} // t.SixtyThreeBitIntegerWithASignBit (int64) (int64)
 		case "SixtyThreeBitIntegerWithASignBit":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.SixtyThreeBitIntegerWithASignBit = int64(nval)
 
-				t.SixtyThreeBitIntegerWithASignBit = int64(extraI)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -1203,24 +1162,21 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					sval, err := jr.ReadString(8192)
 					if err != nil {
 						return err
 					}
-
 					k = string(sval)
 				}
-
 				var v SimpleTypeOne
 
 				{
 
-					if err := v.UnmarshalCBOR(cr); err != nil {
+					if err := v.UnmarshalCBOR(jr); err != nil {
 						return fmt.Errorf("unmarshaling v: %w", err)
 					}
 
 				}
-
 				t.OldMap[k] = v
 
 			}
@@ -1229,51 +1185,33 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.OldNum = uint64(extra)
+				t.OldNum = uint64(nval)
 
-			}
-			// t.OldPtr (cid.Cid) (struct)
+			} // t.OldPtr (cid.Cid) (struct)
 		case "OldPtr":
 
 			{
 
-				b, err := cr.ReadByte()
+				c, err := jr.ReadCidOrNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
+				t.OldPtr = *c
 
-					c, err := cbg.ReadCid(cr)
-					if err != nil {
-						return fmt.Errorf("failed to read cid field t.OldPtr: %w", err)
-					}
-
-					t.OldPtr = &c
-				}
-
-			}
-			// t.OldStr (string) (string)
+			} // t.OldStr (string) (string)
 		case "OldStr":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.OldStr = string(sval)
-			}
-			// t.OldArray ([]testing.SimpleTypeOne) (slice)
+			} // t.OldArray ([]testing.SimpleTypeOne) (slice)
 		case "OldArray":
 
 			maj, extra, err = cr.ReadHeader()
@@ -1304,7 +1242,7 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						if err := t.OldArray[i].UnmarshalCBOR(cr); err != nil {
+						if err := t.OldArray[i].UnmarshalCBOR(jr); err != nil {
 							return fmt.Errorf("unmarshaling t.OldArray[i]: %w", err)
 						}
 
@@ -1340,12 +1278,11 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				if err := t.OldStruct.UnmarshalCBOR(cr); err != nil {
+				if err := t.OldStruct.UnmarshalCBOR(jr); err != nil {
 					return fmt.Errorf("unmarshaling t.OldStruct: %w", err)
 				}
 
-			}
-			// t.OldCidArray ([]cid.Cid) (slice)
+			} // t.OldCidArray ([]cid.Cid) (slice)
 		case "OldCidArray":
 
 			maj, extra, err = cr.ReadHeader()
@@ -1376,11 +1313,10 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						c, err := cbg.ReadCid(cr)
+						c, err := jr.ReadCid()
 						if err != nil {
-							return fmt.Errorf("failed to read cid field t.OldCidArray[i]: %w", err)
+							return err
 						}
-
 						t.OldCidArray[i] = c
 
 					}
@@ -1418,22 +1354,11 @@ func (t *SimpleStructV1) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						b, err := cr.ReadByte()
+						c, err := jr.ReadCidOrNull()
 						if err != nil {
 							return err
 						}
-						if b != cbg.CborNull[0] {
-							if err := cr.UnreadByte(); err != nil {
-								return err
-							}
-
-							c, err := cbg.ReadCid(cr)
-							if err != nil {
-								return fmt.Errorf("failed to read cid field t.OldCidPtrArray[i]: %w", err)
-							}
-
-							t.OldCidPtrArray[i] = &c
-						}
+						t.OldCidPtrArray[i] = *c
 
 					}
 
@@ -2063,24 +1988,21 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					sval, err := jr.ReadString(8192)
 					if err != nil {
 						return err
 					}
-
 					k = string(sval)
 				}
-
 				var v SimpleTypeOne
 
 				{
 
-					if err := v.UnmarshalCBOR(cr); err != nil {
+					if err := v.UnmarshalCBOR(jr); err != nil {
 						return fmt.Errorf("unmarshaling v: %w", err)
 					}
 
 				}
-
 				t.NewMap[k] = v
 
 			}
@@ -2089,51 +2011,33 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.NewNum = uint64(extra)
+				t.NewNum = uint64(nval)
 
-			}
-			// t.NewPtr (cid.Cid) (struct)
+			} // t.NewPtr (cid.Cid) (struct)
 		case "NewPtr":
 
 			{
 
-				b, err := cr.ReadByte()
+				c, err := jr.ReadCidOrNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
+				t.NewPtr = *c
 
-					c, err := cbg.ReadCid(cr)
-					if err != nil {
-						return fmt.Errorf("failed to read cid field t.NewPtr: %w", err)
-					}
-
-					t.NewPtr = &c
-				}
-
-			}
-			// t.NewStr (string) (string)
+			} // t.NewStr (string) (string)
 		case "NewStr":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.NewStr = string(sval)
-			}
-			// t.OldMap (map[string]testing.SimpleTypeOne) (map)
+			} // t.OldMap (map[string]testing.SimpleTypeOne) (map)
 		case "OldMap":
 
 			maj, extra, err = cr.ReadHeader()
@@ -2154,24 +2058,21 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					sval, err := jr.ReadString(8192)
 					if err != nil {
 						return err
 					}
-
 					k = string(sval)
 				}
-
 				var v SimpleTypeOne
 
 				{
 
-					if err := v.UnmarshalCBOR(cr); err != nil {
+					if err := v.UnmarshalCBOR(jr); err != nil {
 						return fmt.Errorf("unmarshaling v: %w", err)
 					}
 
 				}
-
 				t.OldMap[k] = v
 
 			}
@@ -2180,51 +2081,33 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				maj, extra, err = cr.ReadHeader()
+				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
 					return err
 				}
-				if maj != cbg.MajUnsignedInt {
-					return fmt.Errorf("wrong type for uint64 field")
-				}
-				t.OldNum = uint64(extra)
+				t.OldNum = uint64(nval)
 
-			}
-			// t.OldPtr (cid.Cid) (struct)
+			} // t.OldPtr (cid.Cid) (struct)
 		case "OldPtr":
 
 			{
 
-				b, err := cr.ReadByte()
+				c, err := jr.ReadCidOrNull()
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
+				t.OldPtr = *c
 
-					c, err := cbg.ReadCid(cr)
-					if err != nil {
-						return fmt.Errorf("failed to read cid field t.OldPtr: %w", err)
-					}
-
-					t.OldPtr = &c
-				}
-
-			}
-			// t.OldStr (string) (string)
+			} // t.OldStr (string) (string)
 		case "OldStr":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.OldStr = string(sval)
-			}
-			// t.NewArray ([]testing.SimpleTypeOne) (slice)
+			} // t.NewArray ([]testing.SimpleTypeOne) (slice)
 		case "NewArray":
 
 			maj, extra, err = cr.ReadHeader()
@@ -2255,7 +2138,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						if err := t.NewArray[i].UnmarshalCBOR(cr); err != nil {
+						if err := t.NewArray[i].UnmarshalCBOR(jr); err != nil {
 							return fmt.Errorf("unmarshaling t.NewArray[i]: %w", err)
 						}
 
@@ -2317,7 +2200,7 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						if err := t.OldArray[i].UnmarshalCBOR(cr); err != nil {
+						if err := t.OldArray[i].UnmarshalCBOR(jr); err != nil {
 							return fmt.Errorf("unmarshaling t.OldArray[i]: %w", err)
 						}
 
@@ -2353,22 +2236,20 @@ func (t *SimpleStructV2) UnmarshalCBOR(r io.Reader) (err error) {
 
 			{
 
-				if err := t.NewStruct.UnmarshalCBOR(cr); err != nil {
+				if err := t.NewStruct.UnmarshalCBOR(jr); err != nil {
 					return fmt.Errorf("unmarshaling t.NewStruct: %w", err)
 				}
 
-			}
-			// t.OldStruct (testing.SimpleTypeOne) (struct)
+			} // t.OldStruct (testing.SimpleTypeOne) (struct)
 		case "OldStruct":
 
 			{
 
-				if err := t.OldStruct.UnmarshalCBOR(cr); err != nil {
+				if err := t.OldStruct.UnmarshalCBOR(jr); err != nil {
 					return fmt.Errorf("unmarshaling t.OldStruct: %w", err)
 				}
 
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -2498,40 +2379,23 @@ func (t *RenamedFields) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Bar":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Bar = string(sval)
-			}
-			// t.Foo (int64) (int64)
+			} // t.Foo (int64) (int64)
 		case "Foo":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Foo = int64(nval)
 
-				t.Foo = int64(extraI)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -2697,63 +2561,36 @@ func (t *TestEmpty) UnmarshalCBOR(r io.Reader) (err error) {
 		switch string(nameBuf[:nameLen]) {
 		// t.Cat (int64) (int64)
 		case "Cat":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Cat = int64(nval)
 
-				t.Cat = int64(extraI)
-			}
-			// t.Foo (string) (string)
+			} // t.Foo (string) (string)
 		case "Foo":
 
 			{
-				b, err := cr.ReadByte()
+				sval, err := jr.ReadStringOrNull(8192)
 				if err != nil {
 					return err
 				}
-				if b != cbg.CborNull[0] {
-					if err := cr.UnreadByte(); err != nil {
-						return err
-					}
-
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
-					if err != nil {
-						return err
-					}
-
-					t.Foo = (*string)(&sval)
+				if s != nil {
+					t.Foo = (*string)(sval)
 				}
-			}
-			// t.Beep (string) (string)
+			} // t.Beep (string) (string)
 		case "Beep":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Beep = string(sval)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -2883,40 +2720,23 @@ func (t *TestConstField) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Cats":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Cats = string(sval)
-			}
-			// t.Thing (int64) (int64)
+			} // t.Thing (int64) (int64)
 		case "Thing":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Thing = int64(nval)
 
-				t.Thing = int64(extraI)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -3112,77 +2932,43 @@ func (t *TestCanonicalFieldOrder) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Zp":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Zp = string(sval)
-			}
-			// t.Bar (string) (string)
+			} // t.Bar (string) (string)
 		case "Bar":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Bar = string(sval)
-			}
-			// t.Foo (int64) (int64)
+			} // t.Foo (int64) (int64)
 		case "Foo":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Foo = int64(nval)
 
-				t.Foo = int64(extraI)
-			}
-			// t.Drond (int64) (int64)
+			} // t.Drond (int64) (int64)
 		case "Drond":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Drond = int64(nval)
 
-				t.Drond = int64(extraI)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {
@@ -3342,25 +3128,21 @@ func (t *MapStringString) UnmarshalCBOR(r io.Reader) (err error) {
 				var k string
 
 				{
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					sval, err := jr.ReadString(8192)
 					if err != nil {
 						return err
 					}
-
 					k = string(sval)
 				}
-
 				var v string
 
 				{
-					sval, err := cbg.ReadStringWithMax(cr, 8192)
+					sval, err := jr.ReadString(8192)
 					if err != nil {
 						return err
 					}
-
 					v = string(sval)
 				}
-
 				t.Snorkleblump[k] = v
 
 			}
@@ -3664,14 +3446,12 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Cat":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Cat = string(sval)
-			}
-			// t.Not ([]uint64) (slice)
+			} // t.Not ([]uint64) (slice)
 		case "Not":
 
 			maj, extra, err = cr.ReadHeader()
@@ -3702,14 +3482,11 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						maj, extra, err = cr.ReadHeader()
+						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
 							return err
 						}
-						if maj != cbg.MajUnsignedInt {
-							return fmt.Errorf("wrong type for uint64 field")
-						}
-						t.Not[i] = uint64(extra)
+						t.Not[i] = uint64(nval)
 
 					}
 
@@ -3717,31 +3494,16 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 			}
 			// t.Beep (int64) (int64)
 		case "Beep":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Beep = int64(nval)
 
-				t.Beep = int64(extraI)
-			}
-			// t.Other ([]uint8) (slice)
+			} // t.Other ([]uint8) (slice)
 		case "Other":
 
 			maj, extra, err = cr.ReadHeader()
@@ -3795,14 +3557,11 @@ func (t *TestSliceNilPreserve) UnmarshalCBOR(r io.Reader) (err error) {
 
 					{
 
-						maj, extra, err = cr.ReadHeader()
+						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
 							return err
 						}
-						if maj != cbg.MajUnsignedInt {
-							return fmt.Errorf("wrong type for uint64 field")
-						}
-						t.Stuff[i] = uint64(extra)
+						t.Stuff[i] = uint64(nval)
 
 					}
 
@@ -4029,11 +3788,10 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 					_ = err
 
 					{
-						sval, err := cbg.ReadStringWithMax(cr, 8192)
+						sval, err := jr.ReadString(8192)
 						if err != nil {
 							return err
 						}
-
 						t.Strings[i] = string(sval)
 					}
 
@@ -4069,21 +3827,12 @@ func (t *StringPtrSlices) UnmarshalCBOR(r io.Reader) (err error) {
 					_ = err
 
 					{
-						b, err := cr.ReadByte()
+						sval, err := jr.ReadStringOrNull(8192)
 						if err != nil {
 							return err
 						}
-						if b != cbg.CborNull[0] {
-							if err := cr.UnreadByte(); err != nil {
-								return err
-							}
-
-							sval, err := cbg.ReadStringWithMax(cr, 8192)
-							if err != nil {
-								return err
-							}
-
-							t.StringPtrs[i] = (*string)(&sval)
+						if s != nil {
+							t.StringPtrs[i] = (*string)(sval)
 						}
 					}
 
@@ -4253,51 +4002,32 @@ func (t *FieldNameOverlap) UnmarshalCBOR(r io.Reader) (err error) {
 		case "Bar":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.Bar = string(sval)
-			}
-			// t.Foo (int64) (int64)
+			} // t.Foo (int64) (int64)
 		case "Foo":
+
 			{
-				maj, extra, err := cr.ReadHeader()
+
+				nval, err := jr.ReadNumberAsInt64()
 				if err != nil {
 					return err
 				}
-				var extraI int64
-				switch maj {
-				case cbg.MajUnsignedInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 positive overflow")
-					}
-				case cbg.MajNegativeInt:
-					extraI = int64(extra)
-					if extraI < 0 {
-						return fmt.Errorf("int64 negative overflow")
-					}
-					extraI = -1 - extraI
-				default:
-					return fmt.Errorf("wrong type for int64 field: %d", maj)
-				}
+				t.Foo = int64(nval)
 
-				t.Foo = int64(extraI)
-			}
-			// t.LongerNamedField (string) (string)
+			} // t.LongerNamedField (string) (string)
 		case "LongerNamedField":
 
 			{
-				sval, err := cbg.ReadStringWithMax(cr, 8192)
+				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-
 				t.LongerNamedField = string(sval)
 			}
-
 		default:
 			// Field doesn't exist on this type, so ignore it
 			if err := cbg.ScanForLinks(r, func(cid.Cid) {}); err != nil {

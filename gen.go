@@ -13,12 +13,11 @@ import (
 	cid "github.com/ipfs/go-cid"
 )
 
-const MaxLength = 8192
-
-const ByteArrayMaxLen = 2 << 20
-
-const MaxLenTag = "maxlen"
-const NoUsrMaxLen = -1
+const (
+	MaxLength       = 8192
+	ByteArrayMaxLen = 2 << 20
+	NoUsrMaxLen     = -1
+)
 
 var (
 	cidType      = reflect.TypeOf(cid.Cid{})
@@ -26,8 +25,8 @@ var (
 	deferredType = reflect.TypeOf(Deferred{})
 )
 
-// Gen is a configurable code generator for CBOR types. Use this instead of the convenience
-// functions to have more control over the generated code.
+// Gen is a configurable code generator for DAG JSON types. Use this instead of
+// the convenience functions to have more control over the generated code.
 type Gen struct {
 	MaxArrayLength  int // Default: 8192 (MaxLength)
 	MaxByteLength   int // Default: 2<<20 (ByteArrayMaxLen)
@@ -373,13 +372,11 @@ func tagparse(v string) (map[string]string, error) {
 		if elem == "" {
 			continue
 		}
-
 		if strings.Contains(elem, "=") {
 			parts := strings.Split(elem, "=")
 			if len(parts) != 2 {
 				return nil, fmt.Errorf("struct tags with params must be of form X=Y")
 			}
-
 			out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 		} else if elem == "omitempty" {
 			out["omitempty"] = "true"
@@ -394,41 +391,8 @@ func tagparse(v string) (map[string]string, error) {
 		} else {
 			out["name"] = elem
 		}
-
 	}
-
 	return out, nil
-}
-
-func (gti GenTypeInfo) TupleHeader() []byte {
-	return CborEncodeMajorType(MajArray, uint64(len(gti.Fields)))
-}
-
-func (gti GenTypeInfo) TupleHeaderAsByteString() string {
-	return MakeByteString(gti.TupleHeader())
-}
-
-func MakeByteString(h []byte) string {
-	s := "[]byte{"
-	for _, b := range h {
-		s += fmt.Sprintf("%d,", b)
-	}
-	s += "}"
-	return s
-}
-
-func (gti GenTypeInfo) MapHeader() []byte {
-	return CborEncodeMajorType(MajMap, uint64(len(gti.Fields)))
-}
-
-func (gti GenTypeInfo) MapHeaderAsByteString() string {
-	h := gti.MapHeader()
-	s := "[]byte{"
-	for _, b := range h {
-		s += fmt.Sprintf("%d,", b)
-	}
-	s += "}"
-	return s
 }
 
 func (g Gen) emitDagJsonMarshalStringField(w io.Writer, f Field) error {
@@ -991,235 +955,150 @@ func (t *{{ .Name }}) MarshalDagJSON(w io.Writer) error {
 	return nil
 }
 
-func (g Gen) emitCborUnmarshalStringField(w io.Writer, f Field) error {
+func (g Gen) emitDagJsonUnmarshalStringField(w io.Writer, f Field) error {
 	if f.Pointer {
 		return g.doTemplate(w, f, `
-	{
-		b, err := cr.ReadByte()
-		if err != nil {
-			return err
-		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-
-			sval, err := cbg.ReadStringWithMax(cr, {{ MaxLen 0 "String" }})
+		{
+			sval, err := jr.ReadStringOrNull({{ MaxLen 0 "String" }})
 			if err != nil {
 				return err
 			}
-
-			{{ .Name }} = (*{{ .TypeName }})(&sval)
-		}
-	}
-`)
+			if s != nil {
+				{{ .Name }} = (*{{ .TypeName }})(sval)
+			}
+		}`)
 	}
 	if f.Type == nil {
 		f.Type = reflect.TypeOf("")
 	}
 	return g.doTemplate(w, f, `
 	{
-		sval, err := cbg.ReadStringWithMax(cr, {{  MaxLen 0 "String" }})
+		sval, err := jr.ReadString({{ MaxLen 0 "String" }})
 		if err != nil {
 			return err
 		}
-
 		{{ .Name }} = {{ .TypeName }}(sval)
-	}
-`)
+	}`)
 }
 
-func (g Gen) emitCborUnmarshalStructField(w io.Writer, f Field) error {
+func (g Gen) emitDagJsonUnmarshalStructField(w io.Writer, f Field) error {
 	switch f.Type {
 	case bigIntType:
 		return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajTag || extra != 2 {
-		return fmt.Errorf("big ints should be cbor bignums")
-	}
-
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("big ints should be tagged cbor byte strings")
-	}
-
-	if extra > 256 {
-		return fmt.Errorf("{{ .Name }}: cbor bignum was too large")
-	}
-
-	if extra > 0 {
-		buf := make([]byte, extra)
-		if _, err := io.ReadFull(cr, buf); err != nil {
-			return err
-		}
-		{{ .Name }} = big.NewInt(0).SetBytes(buf)
-	} else {
-		{{ .Name }} = big.NewInt(0)
-	}
-`)
+		{
+			nval, err := jr.ReadNumberAsBigInt(256)
+			if err != nil {
+				return err
+			}
+			{{ .Name }} = nval
+		}`)
 	case cidType:
 		return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
-		b, err := cr.ReadByte()
-		if err != nil {
-			return err
-		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
-				return err
-			}
-{{ end }}
-		c, err := cbg.ReadCid(cr)
-		if err != nil {
-			return fmt.Errorf("failed to read cid field {{ .Name }}: %w", err)
-		}
-{{ if .Pointer }}
-			{{ .Name }} = &c
-		}
-{{ else }}
-		{{ .Name }} = c
-{{ end }}
-	}
-`)
+		{
+			{{ if .Pointer }}
+				c, err := jr.ReadCidOrNull()
+				if err != nil {
+					return err
+				}
+				{{ .Name }} = *c
+			{{ else }}
+				c, err := jr.ReadCid()
+				if err != nil {
+					return err
+				}
+				{{ .Name }} = c
+			{{ end }}
+		}`)
 	case deferredType:
 		return g.doTemplate(w, f, `
-	{
-{{ if .Pointer }}
-		{{ .Name }} = new(cbg.Deferred)
-{{ end }}
-		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-			return fmt.Errorf("failed to read deferred field: %w", err)
-		}
-	}
-`)
-
+		{
+			{{ if .Pointer }}
+				{{ .Name }} = new(jsg.Deferred)
+			{{ end }}
+			if err := {{ .Name }}.UnmarshalCBOR(jr); err != nil {
+				return fmt.Errorf("failed to read deferred field: %w", err)
+			}
+		}`)
 	default:
 		return g.doTemplate(w, f, `
+		{
+			{{ if .Pointer }}
+			 	null, err := jr.PeekNull()
+				if err != nil {
+					return err
+				}
+				if null {
+					if err := jr.ReadNull(); err != nil {
+						return err
+					}
+				} else {
+					{{ .Name }} = new({{ .TypeName }})
+					if err := {{ .Name }}.UnmarshalCBOR(jr); err != nil {
+						return fmt.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
+					}
+				}
+			{{ else }}
+				if err := {{ .Name }}.UnmarshalCBOR(jr); err != nil {
+					return fmt.Errorf("unmarshaling {{ .Name }}: %w", err)
+				}
+			{{ end }}
+		}`)
+	}
+}
+
+func (g Gen) emitDagJsonUnmarshalInt64Field(w io.Writer, f Field) error {
+	return g.doTemplate(w, f, `
 	{
-{{ if .Pointer }}
-		b, err := cr.ReadByte()
-		if err != nil {
-			return err
-		}
-		if b != cbg.CborNull[0] {
-			if err := cr.UnreadByte(); err != nil {
+		{{ if .Pointer }}
+			nval, err := jr.ReadNumberAsInt64OrNull()
+			if err != nil {
 				return err
 			}
-			{{ .Name }} = new({{ .TypeName }})
-			if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-				return fmt.Errorf("unmarshaling {{ .Name }} pointer: %w", err)
+			if nval != nil {
+				typed := {{ .TypeName }}(*nval)
+				{{ .Name }} = &typed
 			}
-		}
-{{ else }}
-		if err := {{ .Name }}.UnmarshalCBOR(cr); err != nil {
-			return fmt.Errorf("unmarshaling {{ .Name }}: %w", err)
-		}
-{{ end }}
-	}
-`)
-	}
+		{{ else }}
+			nval, err := jr.ReadNumberAsInt64()
+			if err != nil {
+				return err
+			}
+			{{ .Name }} = {{ .TypeName }}(nval)
+		{{ end }}
+	}`)
 }
 
-func (g Gen) emitCborUnmarshalInt64Field(w io.Writer, f Field) error {
-	return g.doTemplate(w, f, `{
-	{{ if .Pointer }}
-	b, err := cr.ReadByte()
-	if err != nil {
-		return err
-	}
-	if b != cbg.CborNull[0] {
-		if err := cr.UnreadByte(); err != nil {
-			return err
-		}
-{{ end }}maj, extra, err := {{ ReadHeader "cr" }}
-		if err != nil {
-			return err
-		}
-		var extraI int64
-		switch maj {
-		case cbg.MajUnsignedInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 positive overflow")
-			}
-		case cbg.MajNegativeInt:
-			extraI = int64(extra)
-			if extraI < 0 {
-				return fmt.Errorf("int64 negative overflow")
-			}
-			extraI = -1 - extraI
-		default:
-			return fmt.Errorf("wrong type for int64 field: %d", maj)
-		}
-
-{{ if .Pointer }}
-		{{ .Name }} = (*{{ .TypeName }})(&extraI)
-}
-{{ else }}
-		{{ .Name }} = {{ .TypeName }}(extraI)
-{{ end }}}
-`)
-}
-
-func (g Gen) emitCborUnmarshalUint64Field(w io.Writer, f Field) error {
+func (g Gen) emitDagJsonUnmarshalUint64Field(w io.Writer, f Field) error {
 	return g.doTemplate(w, f, `
 	{
-{{ if .Pointer }}
-	b, err := cr.ReadByte()
-	if err != nil {
-		return err
-	}
-	if b != cbg.CborNull[0] {
-		if err := cr.UnreadByte(); err != nil {
-			return err
-		}
-		maj, extra, err = {{ ReadHeader "cr" }}
+		{{ if .Pointer }}
+			nval, err := jr.ReadNumberAsUint64OrNull()
+			if err != nil {
+				return err
+			}
+			if nval != nil {
+				typed := {{ .TypeName }}(*nval)
+				{{ .Name }} = &typed
+			}
+		{{ else }}
+			nval, err := jr.ReadNumberAsUint64()
+			if err != nil {
+				return err
+			}
+			{{ .Name }} = {{ .TypeName }}(nval)
+		{{ end }}
+	}`)
+}
+
+func (g Gen) emitDagJsonUnmarshalUint8Field(w io.Writer, f Field) error {
+	return g.doTemplate(w, f, `
+	{
+		nval, err := jr.ReadNumberAsUint8()
 		if err != nil {
 			return err
 		}
-		if maj != cbg.MajUnsignedInt {
-			return fmt.Errorf("wrong type for uint64 field")
-		}
-		typed := {{ .TypeName }}(extra)
-		{{ .Name }} = &typed
-	}
-{{ else }}
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-	if maj != cbg.MajUnsignedInt {
-		return fmt.Errorf("wrong type for uint64 field")
-	}
-	{{ .Name }} = {{ .TypeName }}(extra)
-{{ end }}
-	}
-`)
-}
-
-func (g Gen) emitCborUnmarshalUint8Field(w io.Writer, f Field) error {
-	return g.doTemplate(w, f, `
-	maj, extra, err = {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-	if maj != cbg.MajUnsignedInt {
-		return fmt.Errorf("wrong type for uint8 field")
-	}
-	if extra > math.MaxUint8 {
-		return fmt.Errorf("integer in input was too large for uint8 field")
-	}
-	{{ .Name }} = {{ .TypeName }}(extra)
-`)
+		{{ .Name }} = {{ .TypeName }}(nval)
+	}`)
 }
 
 func (g Gen) emitCborUnmarshalBoolField(w io.Writer, f Field) error {
@@ -1306,7 +1185,7 @@ func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 `); err != nil {
 			return err
 		}
-		if err := g.emitCborUnmarshalStringField(w, Field{Name: "k"}); err != nil {
+		if err := g.emitDagJsonUnmarshalStringField(w, Field{Name: "k"}); err != nil {
 			return err
 		}
 	default:
@@ -1322,7 +1201,7 @@ func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 `); err != nil {
 			return err
 		}
-		if err := g.emitCborUnmarshalStringField(w, Field{Name: "v"}); err != nil {
+		if err := g.emitDagJsonUnmarshalStringField(w, Field{Name: "v"}); err != nil {
 			return err
 		}
 		if err := g.doTemplate(w, f, `
@@ -1348,7 +1227,7 @@ func (g Gen) emitCborUnmarshalMapField(w io.Writer, f Field) error {
 		if pointer {
 			subf.Type = subf.Type.Elem()
 		}
-		if err := g.emitCborUnmarshalStructField(w, subf); err != nil {
+		if err := g.emitDagJsonUnmarshalStructField(w, subf); err != nil {
 			return err
 		}
 		if err := g.doTemplate(w, f, `
@@ -1461,7 +1340,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			Pointer: pointer,
 			Name:    f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalStructField(w, subf)
+		err := g.emitDagJsonUnmarshalStructField(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1471,7 +1350,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			Pkg:  f.Pkg,
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalUint64Field(w, subf)
+		err := g.emitDagJsonUnmarshalUint64Field(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1481,7 +1360,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			Pkg:  f.Pkg,
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalInt64Field(w, subf)
+		err := g.emitDagJsonUnmarshalInt64Field(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1515,7 +1394,7 @@ func (g Gen) emitCborUnmarshalSliceField(w io.Writer, f Field) error {
 			Pointer: pointer,
 			Name:    f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalStringField(w, subf)
+		err := g.emitDagJsonUnmarshalStringField(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1613,7 +1492,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 			Pointer: pointer,
 			Name:    f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalStructField(w, subf)
+		err := g.emitDagJsonUnmarshalStructField(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1623,7 +1502,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 			Pkg:  f.Pkg,
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalUint64Field(w, subf)
+		err := g.emitDagJsonUnmarshalUint64Field(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1633,7 +1512,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 			Pkg:  f.Pkg,
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalInt64Field(w, subf)
+		err := g.emitDagJsonUnmarshalInt64Field(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1666,7 +1545,7 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 			Pkg:  f.Pkg,
 			Name: f.Name + "[" + f.IterLabel + "]",
 		}
-		err := g.emitCborUnmarshalStringField(w, subf)
+		err := g.emitDagJsonUnmarshalStringField(w, subf)
 		if err != nil {
 			return err
 		}
@@ -1680,55 +1559,27 @@ func (g Gen) emitCborUnmarshalArrayField(w io.Writer, f Field) error {
 	return nil
 }
 
-func (g Gen) emitCborUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
+func (g Gen) emitDagJsonUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
 	if gti.Transparent {
 		err = g.doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
-	*t = {{.Name}}{}
+		func (t *{{ .Name }}) UnmarshalDagJSON(r io.Reader) (err error) {
+			*t = {{.Name}}{}
 
-	cr := cbg.NewCborReader(r)
-	var maj byte
-	var extra uint64
-	_ = maj
-	_ = extra
-`)
+			jr := jsg.NewDagJsonReader(r)`)
 	} else {
 		err = g.doTemplate(w, gti, `
-func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
-	*t = {{.Name}}{}
+		func (t *{{ .Name }}) UnmarshalDagJSON(r io.Reader) (err error) {
+			*t = {{.Name}}{}
 
-	cr := cbg.NewCborReader(r)
-
-	maj, extra, err := {{ ReadHeader "cr" }}
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("cbor input should be of type array")
-	}
-{{ if eq (len .Fields) .MandatoryFieldCount }}
-	if extra != {{ .MandatoryFieldCount }} {
-		return fmt.Errorf("cbor input had wrong number of fields")
-	}
-{{ else }}
-	if extra > {{ len .Fields }} {
-		return fmt.Errorf("cbor input has too many fields %d > {{ len .Fields }}", extra)
-	}
-
-	if extra < {{ .MandatoryFieldCount }} {
-		return fmt.Errorf("cbor input has too few fields %d < {{ .MandatoryFieldCount }}", extra)
-	}
-	
-	fieldCount := extra
-{{ end }}
-
-`)
+			jr := jsg.NewDagJsonReader(r)
+			defer func() {
+				if err == io.EOF {
+					err = io.ErrUnexpectedEOF
+				}
+			}()
+			if err := jr.ReadArrayOpen(); err != nil {
+				return err
+			}`)
 	}
 	if err != nil {
 		return err
@@ -1741,31 +1592,31 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 			f.Name = "t." + f.Name
 		}
 
-		fmt.Fprintf(w, "\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
+		fmt.Fprintf(w, "\n\t// %s (%s) (%s)\n", f.Name, f.Type, f.Type.Kind())
 
 		if f.Optional {
-			fmt.Fprintf(w, "\tif fieldCount < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
+			fmt.Fprintf(w, "\n\tif fieldCount < %d {\n\t\treturn nil\n\t}\n", fieldIndex+1)
 		}
 
 		switch f.Type.Kind() {
 		case reflect.String:
-			if err := g.emitCborUnmarshalStringField(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalStringField(w, f); err != nil {
 				return err
 			}
 		case reflect.Struct:
-			if err := g.emitCborUnmarshalStructField(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalStructField(w, f); err != nil {
 				return err
 			}
 		case reflect.Uint64:
-			if err := g.emitCborUnmarshalUint64Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalUint64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Uint8:
-			if err := g.emitCborUnmarshalUint8Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalUint8Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Int64:
-			if err := g.emitCborUnmarshalInt64Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalInt64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Array:
@@ -1787,9 +1638,39 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 		default:
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
 		}
+		if !gti.Transparent {
+			if fieldIndex < gti.MandatoryFieldCount-1 {
+				if _, err := fmt.Fprintf(w, `
+				{
+					end, err := jr.ReadArrayCloseOrComma()
+					if err != nil {
+						return err
+					}
+					if end {
+						return fmt.Errorf("json input has too few fields %d < %d")
+					}
+				}`, fieldIndex+1, gti.MandatoryFieldCount); err != nil {
+					return err
+				}
+			} else if fieldIndex == len(gti.Fields)-1 {
+				if _, err := fmt.Fprintf(w, `
+				if err := jr.ReadArrayClose(); err != nil {
+					return err
+				}`); err != nil {
+					return err
+				}
+			} else {
+				if _, err := fmt.Fprintf(w, `
+				if _, err := jr.ReadArrayCloseOrComma(); err != nil {
+					return err
+				}`); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	fmt.Fprintf(w, "\treturn nil\n}\n\n")
+	fmt.Fprintf(w, "\n\treturn nil\n}\n\n")
 
 	return nil
 }
@@ -1806,7 +1687,7 @@ func (g Gen) GenTupleEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 		return err
 	}
 
-	if err := g.emitCborUnmarshalStructTuple(w, gti); err != nil {
+	if err := g.emitDagJsonUnmarshalStructTuple(w, gti); err != nil {
 		return err
 	}
 
@@ -1828,7 +1709,7 @@ func emptyValForField(f Field) (string, error) {
 	}
 }
 
-func (g Gen) emitCborMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
+func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	var hasOmitEmpty bool
 	for _, f := range gti.Fields {
 		if f.OmitEmpty {
@@ -2038,23 +1919,23 @@ func (t *{{ .Name}}) UnmarshalCBOR(r io.Reader) (err error) {
 
 		switch f.Type.Kind() {
 		case reflect.String:
-			if err := g.emitCborUnmarshalStringField(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalStringField(w, f); err != nil {
 				return err
 			}
 		case reflect.Struct:
-			if err := g.emitCborUnmarshalStructField(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalStructField(w, f); err != nil {
 				return err
 			}
 		case reflect.Uint64:
-			if err := g.emitCborUnmarshalUint64Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalUint64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Int64:
-			if err := g.emitCborUnmarshalInt64Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalInt64Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Uint8:
-			if err := g.emitCborUnmarshalUint8Field(w, f); err != nil {
+			if err := g.emitDagJsonUnmarshalUint8Field(w, f); err != nil {
 				return err
 			}
 		case reflect.Array:
@@ -2100,7 +1981,7 @@ func GenMapEncodersForType(gti *GenTypeInfo, w io.Writer) error {
 
 // Generates 'tuple representation' cbor encoders for the given type
 func (g Gen) GenMapEncodersForType(gti *GenTypeInfo, w io.Writer) error {
-	if err := g.emitCborMarshalStructMap(w, gti); err != nil {
+	if err := g.emitDagJsonMarshalStructMap(w, gti); err != nil {
 		return err
 	}
 
