@@ -18,7 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	cbg "github.com/whyrusleeping/cbor-gen"
+	jsg "github.com/alanshaw/dag-json-gen"
 )
 
 var alwaysEqual = cmp.Comparer(func(_, _ interface{}) bool { return true })
@@ -67,12 +67,12 @@ func TestBigInt(t *testing.T) {
 	} {
 
 		var buf bytes.Buffer
-		if err := v.MarshalCBOR(&buf); err != nil {
+		if err := v.MarshalDagJSON(&buf); err != nil {
 			t.Fatal(err)
 		}
 
 		var o BigIntContainer
-		if err := o.UnmarshalCBOR(&buf); err != nil {
+		if err := o.UnmarshalDagJSON(&buf); err != nil {
 			t.Fatal(err)
 		}
 		if v.Int == nil {
@@ -85,7 +85,7 @@ func TestBigInt(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	v := BigIntContainer{Int: big.NewInt(-1)}
-	err := v.MarshalCBOR(&buf)
+	err := v.MarshalDagJSON(&buf)
 	if err == nil {
 		t.Fatal("marshalling a negative int should have failed")
 	}
@@ -103,7 +103,7 @@ func WithGolden(golden []byte) RoundTripOption {
 	}
 }
 
-func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmarshaler, options ...RoundTripOption) {
+func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJsonUnmarshaler, options ...RoundTripOption) {
 	t.Helper()
 
 	opts := &RoundTripOptions{}
@@ -112,7 +112,7 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 	}
 
 	buf := new(bytes.Buffer)
-	if err := obj.MarshalCBOR(buf); err != nil {
+	if err := obj.MarshalDagJSON(buf); err != nil {
 		t.Fatal("i guess its fine to fail marshaling")
 	}
 
@@ -124,7 +124,7 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 		}
 	}
 
-	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+	if err := nobj.UnmarshalDagJSON(bytes.NewReader(enc)); err != nil {
 		t.Logf("got bad bytes: %x", enc)
 		t.Fatal("failed to round trip object: ", err)
 	}
@@ -135,7 +135,7 @@ func testValueRoundtrip(t *testing.T, obj cbg.CBORMarshaler, nobj cbg.CBORUnmars
 	}
 
 	nbuf := new(bytes.Buffer)
-	if err := nobj.(cbg.CBORMarshaler).MarshalCBOR(nbuf); err != nil {
+	if err := nobj.(jsg.DagJsonMarshaler).MarshalDagJSON(nbuf); err != nil {
 		t.Fatal("failed to remarshal object: ", err)
 	}
 
@@ -155,8 +155,8 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 			t.Fatal("failed to generate test value")
 		}
 
-		obj := val.Addr().Interface().(cbg.CBORMarshaler)
-		nobj := reflect.New(typ).Interface().(cbg.CBORUnmarshaler)
+		obj := val.Addr().Interface().(jsg.DagJsonMarshaler)
+		nobj := reflect.New(typ).Interface().(jsg.DagJsonUnmarshaler)
 		testValueRoundtrip(t, obj, nobj)
 	}
 }
@@ -169,15 +169,15 @@ func TestDeferredContainer(t *testing.T) {
 
 func TestNilValueDeferredUnmarshaling(t *testing.T) {
 	var zero DeferredContainer
-	zero.Deferred = &cbg.Deferred{Raw: []byte{0xf6}}
+	zero.Deferred = &jsg.Deferred{Raw: []byte{0xf6}}
 
 	buf := new(bytes.Buffer)
-	if err := zero.MarshalCBOR(buf); err != nil {
+	if err := zero.MarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
 	var n DeferredContainer
-	if err := n.UnmarshalCBOR(buf); err != nil {
+	if err := n.UnmarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,18 +194,18 @@ func TestFixedArrays(t *testing.T) {
 
 func TestTimeIsh(t *testing.T) {
 	val := &ThingWithSomeTime{
-		When:    cbg.CborTime(time.Now()),
+		When:    jsg.DagJsonTime(time.Now()),
 		Stuff:   1234,
 		CatName: "hank",
 	}
 
 	buf := new(bytes.Buffer)
-	if err := val.MarshalCBOR(buf); err != nil {
+	if err := val.MarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
 	out := ThingWithSomeTime{}
-	if err := out.UnmarshalCBOR(buf); err != nil {
+	if err := out.UnmarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -257,14 +257,14 @@ func TestLessToMoreFieldsRoundTrip(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := obj.MarshalCBOR(buf); err != nil {
+	if err := obj.MarshalDagJSON(buf); err != nil {
 		t.Fatal("failed marshaling", err)
 	}
 
 	enc := buf.Bytes()
 
 	nobj := SimpleStructV2{}
-	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+	if err := nobj.UnmarshalDagJSON(bytes.NewReader(enc)); err != nil {
 		t.Logf("got bad bytes: %x", enc)
 		t.Fatal("failed to round trip object: ", err)
 	}
@@ -354,14 +354,14 @@ func TestMoreToLessFieldsRoundTrip(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := obj.MarshalCBOR(buf); err != nil {
+	if err := obj.MarshalDagJSON(buf); err != nil {
 		t.Fatal("failed marshaling", err)
 	}
 
 	enc := buf.Bytes()
 
 	nobj := SimpleStructV1{}
-	if err := nobj.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+	if err := nobj.UnmarshalDagJSON(bytes.NewReader(enc)); err != nil {
 		t.Logf("got bad bytes: %x", enc)
 		t.Fatal("failed to round trip object: ", err)
 	}
@@ -393,7 +393,7 @@ func TestErrUnexpectedEOF(t *testing.T) {
 	err := quick.Check(func(val SimpleTypeTwo, endIdx uint) bool {
 		return t.Run("quickcheck", func(t *testing.T) {
 			buf := new(bytes.Buffer)
-			if err := val.MarshalCBOR(buf); err != nil {
+			if err := val.MarshalDagJSON(buf); err != nil {
 				t.Error(err)
 			}
 
@@ -403,7 +403,7 @@ func TestErrUnexpectedEOF(t *testing.T) {
 			enc = enc[:endIdx]
 
 			nobj := SimpleTypeTwo{}
-			err := nobj.UnmarshalCBOR(bytes.NewReader(enc))
+			err := nobj.UnmarshalDagJSON(bytes.NewReader(enc))
 			t.Logf("endIdx=%v, originalLen=%v", endIdx, originalLen)
 			if int(endIdx) == originalLen && err != nil {
 				t.Fatal("failed to round trip object: ", err)
@@ -429,12 +429,12 @@ func TestLargeField(t *testing.T) {
 		LargeBytes: bs,
 	}
 	buf := new(bytes.Buffer)
-	if err := typ.MarshalCBOR(buf); err != nil {
+	if err := typ.MarshalDagJSON(buf); err != nil {
 		t.Error(err)
 	}
 	enc := buf.Bytes()
 	typ.LargeBytes = make([]byte, 0) // reset
-	if err := typ.UnmarshalCBOR(bytes.NewReader(enc)); err != nil {
+	if err := typ.UnmarshalDagJSON(bytes.NewReader(enc)); err != nil {
 		t.Error(err)
 	}
 
@@ -444,7 +444,7 @@ func TestLargeField(t *testing.T) {
 		LargeBytes: bs,
 	}
 	buf = new(bytes.Buffer)
-	err := badType.MarshalCBOR(buf)
+	err := badType.MarshalDagJSON(buf)
 	if err == nil {
 		t.Fatal("buffer bigger than specified in struct tag should fail")
 	}
@@ -466,14 +466,14 @@ func TestConstRoundtrip(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := tcf.MarshalCBOR(buf); err != nil {
+	if err := tcf.MarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
 	fmt.Printf("%x\n", buf.Bytes())
 
 	var out TestConstField
-	if err := out.UnmarshalCBOR(buf); err != nil {
+	if err := out.UnmarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -499,12 +499,12 @@ func TestMapOfStringToString(t *testing.T) {
 	}}
 
 	buf := new(bytes.Buffer)
-	if err := mss.MarshalCBOR(buf); err != nil {
+	if err := mss.MarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
 	var out MapStringString
-	if err := out.UnmarshalCBOR(buf); err != nil {
+	if err := out.UnmarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -638,7 +638,7 @@ func TestConfigurability(t *testing.T) {
 			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
 
 			ls.Arr = []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0}
-			err := ls.MarshalCBOR(new(bytes.Buffer))
+			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "Slice value in field t.Arr was too long" {
@@ -648,7 +648,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalCBOR(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -658,7 +658,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalCBOR(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "t.Arr: array too large (11)" {
@@ -677,7 +677,7 @@ func TestConfigurability(t *testing.T) {
 			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
 
 			ls.Byts = []byte("1234567890")
-			err := ls.MarshalCBOR(new(bytes.Buffer))
+			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "Byte array in field t.Byts was too long" {
@@ -687,7 +687,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalCBOR(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -697,7 +697,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalCBOR(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "t.Byts: byte array too large (10)" {
@@ -716,7 +716,7 @@ func TestConfigurability(t *testing.T) {
 			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
 
 			ls.Str = "123456789"
-			err := ls.MarshalCBOR(new(bytes.Buffer))
+			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "Value in field t.Str was too long" {
@@ -726,7 +726,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalCBOR(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -736,7 +736,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalCBOR(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "string in input was too long" {
@@ -798,12 +798,12 @@ func TestUnmarshalExtraFields(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := in.MarshalCBOR(buf); err != nil {
+	if err := in.MarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 
 	var out RenamedFields
-	if err := out.UnmarshalCBOR(buf); err != nil {
+	if err := out.UnmarshalDagJSON(buf); err != nil {
 		t.Fatal(err)
 	}
 

@@ -30,14 +30,14 @@ const (
 	MajOther       = 7
 )
 
-var maxLengthError = fmt.Errorf("length beyond maximum allowed")
+var errMaxLength = fmt.Errorf("length beyond maximum allowed")
 
-type CBORUnmarshaler interface {
-	UnmarshalCBOR(io.Reader) error
+type DagJsonUnmarshaler interface {
+	UnmarshalDagJSON(io.Reader) error
 }
 
-type CBORMarshaler interface {
-	MarshalCBOR(io.Writer) error
+type DagJsonMarshaler interface {
+	MarshalDagJSON(io.Writer) error
 }
 
 func readByte(r io.Reader) (byte, error) {

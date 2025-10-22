@@ -1,4 +1,4 @@
-module github.com/whyrusleeping/cbor-gen
+module github.com/alanshaw/dag-json-gen
 
 go 1.18
 

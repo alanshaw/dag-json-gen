@@ -7,7 +7,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 
-	cbg "github.com/whyrusleeping/cbor-gen"
+	jsg "github.com/alanshaw/dag-json-gen"
 )
 
 const Thingc = 3
@@ -89,7 +89,7 @@ type SimpleStructV2 struct {
 
 type DeferredContainer struct {
 	Stuff    *SimpleTypeOne
-	Deferred *cbg.Deferred
+	Deferred *jsg.Deferred
 	Value    uint64
 }
 
@@ -100,7 +100,7 @@ type FixedArrays struct {
 }
 
 type ThingWithSomeTime struct {
-	When    cbg.CborTime
+	When    jsg.DagJsonTime
 	Stuff   int64
 	CatName string
 }

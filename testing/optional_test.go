@@ -15,7 +15,7 @@ func TestOptionalFields(t *testing.T) {
 		t.Run(fmt.Sprintf("length-%d", count), func(t *testing.T) {
 			var buf bytes.Buffer
 			obj := IntArray{Ints: ints[:count]}
-			if err := obj.MarshalCBOR(&buf); err != nil {
+			if err := obj.MarshalDagJSON(&buf); err != nil {
 				t.Fatal(err)
 			}
 

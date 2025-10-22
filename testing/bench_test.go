@@ -25,7 +25,7 @@ func BenchmarkMarshaling(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := tt.MarshalCBOR(io.Discard); err != nil {
+		if err := tt.MarshalDagJSON(io.Discard); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -41,7 +41,7 @@ func BenchmarkUnmarshaling(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTwo)
 
 	buf := new(bytes.Buffer)
-	if err := tt.MarshalCBOR(buf); err != nil {
+	if err := tt.MarshalDagJSON(buf); err != nil {
 		b.Fatal(err)
 	}
 
@@ -53,7 +53,7 @@ func BenchmarkUnmarshaling(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		reader.Seek(0, io.SeekStart)
 		var tt SimpleTypeTwo
-		if err := tt.UnmarshalCBOR(reader); err != nil {
+		if err := tt.UnmarshalDagJSON(reader); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -69,7 +69,7 @@ func BenchmarkLinkScan(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTwo)
 
 	buf := new(bytes.Buffer)
-	if err := tt.MarshalCBOR(buf); err != nil {
+	if err := tt.MarshalDagJSON(buf); err != nil {
 		b.Fatal(err)
 	}
 
@@ -96,7 +96,7 @@ func BenchmarkDeferred(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTwo)
 
 	buf := new(bytes.Buffer)
-	if err := tt.MarshalCBOR(buf); err != nil {
+	if err := tt.MarshalDagJSON(buf); err != nil {
 		b.Fatal(err)
 	}
 
@@ -110,7 +110,7 @@ func BenchmarkDeferred(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		reader.Seek(0, io.SeekStart)
-		if err := deferred.UnmarshalCBOR(reader); err != nil {
+		if err := deferred.UnmarshalDagJSON(reader); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -129,7 +129,7 @@ func BenchmarkMapMarshaling(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		if err := tt.MarshalCBOR(io.Discard); err != nil {
+		if err := tt.MarshalDagJSON(io.Discard); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -145,7 +145,7 @@ func BenchmarkMapUnmarshaling(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTree)
 
 	buf := new(bytes.Buffer)
-	if err := tt.MarshalCBOR(buf); err != nil {
+	if err := tt.MarshalDagJSON(buf); err != nil {
 		b.Fatal(err)
 	}
 
@@ -157,7 +157,7 @@ func BenchmarkMapUnmarshaling(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		reader.Seek(0, io.SeekStart)
 		var tt SimpleTypeTree
-		if err := tt.UnmarshalCBOR(reader); err != nil {
+		if err := tt.UnmarshalDagJSON(reader); err != nil {
 			b.Fatal(err)
 		}
 	}

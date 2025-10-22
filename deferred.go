@@ -18,10 +18,11 @@ type Deferred struct {
 	Raw []byte
 }
 
-func (d *Deferred) MarshalCBOR(w io.Writer) error {
+func (d *Deferred) MarshalDagJSON(w io.Writer) error {
 	if d == nil {
-		_, err := w.Write(CborNull)
-		return err
+		if _, err := w.Write([]byte("null")); err != nil {
+			return err
+		}
 	}
 	if d.Raw == nil {
 		return errors.New("cannot marshal Deferred with nil value for Raw (will not unmarshal)")
@@ -30,7 +31,7 @@ func (d *Deferred) MarshalCBOR(w io.Writer) error {
 	return err
 }
 
-func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
+func (d *Deferred) UnmarshalDagJSON(br io.Reader) (err error) {
 	buf := deferredBufferPool.Get().(*bytes.Buffer)
 
 	defer func() {
@@ -73,7 +74,7 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 			// nothing fancy to do
 		case MajByteString, MajTextString:
 			if extra > ByteArrayMaxLen {
-				return maxLengthError
+				return errMaxLength
 			}
 			// Copy the bytes
 			limitedReader.N = int64(extra)
@@ -87,12 +88,12 @@ func (d *Deferred) UnmarshalCBOR(br io.Reader) (err error) {
 			remaining++
 		case MajArray:
 			if extra > MaxLength {
-				return maxLengthError
+				return errMaxLength
 			}
 			remaining += extra
 		case MajMap:
 			if extra > MaxLength {
-				return maxLengthError
+				return errMaxLength
 			}
 			remaining += extra * 2
 		default:

@@ -24,7 +24,7 @@ func ValidateCBOR(b []byte) error {
 			// nothing fancy to do
 		case MajByteString, MajTextString:
 			if extra > ByteArrayMaxLen {
-				return maxLengthError
+				return errMaxLength
 			}
 			if uint64(br.Len()) < extra {
 				return io.ErrUnexpectedEOF
@@ -37,12 +37,12 @@ func ValidateCBOR(b []byte) error {
 			remaining++
 		case MajArray:
 			if extra > MaxLength {
-				return maxLengthError
+				return errMaxLength
 			}
 			remaining += extra
 		case MajMap:
 			if extra > MaxLength {
-				return maxLengthError
+				return errMaxLength
 			}
 			remaining += extra * 2
 		default:

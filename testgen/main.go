@@ -1,12 +1,12 @@
 package main
 
 import (
-	cbg "github.com/whyrusleeping/cbor-gen"
-	types "github.com/whyrusleeping/cbor-gen/testing"
+	jsg "github.com/alanshaw/dag-json-gen"
+	types "github.com/alanshaw/dag-json-gen/testing"
 )
 
 func main() {
-	if err := cbg.WriteTupleEncodersToFile("testing/cbor_gen.go", "testing",
+	if err := jsg.WriteTupleEncodersToFile("testing/dag_json_gen.go", "testing",
 		types.SignedArray{},
 		types.SimpleTypeOne{},
 		types.SimpleTypeTwo{},
@@ -27,7 +27,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := cbg.WriteMapEncodersToFile("testing/cbor_map_gen.go", "testing",
+	if err := jsg.WriteMapEncodersToFile("testing/dag_json_map_gen.go", "testing",
 		types.SimpleTypeTree{},
 		types.NeedScratchForMap{},
 		types.SimpleStructV1{},
@@ -44,22 +44,22 @@ func main() {
 		panic(err)
 	}
 
-	err := cbg.Gen{
+	err := jsg.Gen{
 		MaxArrayLength:  10,
 		MaxByteLength:   9,
 		MaxStringLength: 8,
-	}.WriteTupleEncodersToFile("testing/cbor_options_gen.go", "testing",
+	}.WriteTupleEncodersToFile("testing/dag_json_options_gen.go", "testing",
 		types.LimitedStruct{},
 	)
 	if err != nil {
 		panic(err)
 	}
 
-	err = cbg.Gen{
+	err = jsg.Gen{
 		MaxArrayLength:  10,
 		MaxByteLength:   9,
 		MaxStringLength: 10000,
-	}.WriteTupleEncodersToFile("testing/cbor_options_gen2.go", "testing",
+	}.WriteTupleEncodersToFile("testing/dag_json_options_gen2.go", "testing",
 		types.LongString{},
 	)
 	if err != nil {

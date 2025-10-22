@@ -77,8 +77,8 @@ func TestDeferredMaxLengthSingle(t *testing.T) {
 	}
 
 	var deferred Deferred
-	err := deferred.UnmarshalCBOR(&header)
-	if err != maxLengthError {
+	err := deferred.UnmarshalDagJSON(&header)
+	if err != errMaxLength {
 		t.Fatal("deferred: allowed more than the maximum allocation supported")
 	}
 }
