@@ -1,11 +1,12 @@
 module github.com/alanshaw/dag-json-gen
 
-go 1.18
+go 1.25
 
 require (
 	github.com/google/go-cmp v0.4.0
 	github.com/ipfs/go-cid v0.0.6
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+	pitr.ca/jsontokenizer v0.3.0
 )
 
 require (
@@ -20,5 +21,4 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
 	golang.org/x/sys v0.0.0-20190412213103-97732733099d // indirect
-	pitr.ca/jsontokenizer v0.3.0 // indirect
 )

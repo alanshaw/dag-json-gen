@@ -27,7 +27,7 @@ func TestOptionalFields(t *testing.T) {
 				Int3:  0xf3,
 				Int4:  0xf4,
 			}
-			err := out.UnmarshalCBOR(&buf)
+			err := out.UnmarshalDagJSON(&buf)
 			switch count {
 			case 4:
 				if out.Int4 != ints[3] {

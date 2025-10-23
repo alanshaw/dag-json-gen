@@ -2,6 +2,8 @@ package typegen
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,25 +11,121 @@ import (
 	"strconv"
 
 	cid "github.com/ipfs/go-cid"
-	json "pitr.ca/jsontokenizer"
+	"pitr.ca/jsontokenizer"
 )
+
+var _ io.Writer = (*DagJsonWriter)(nil)
+
+type DagJsonWriter struct {
+	w io.Writer
+}
+
+func (d *DagJsonWriter) Write(p []byte) (n int, err error) {
+	return d.w.Write(p)
+}
+
+func NewDagJsonWriter(w io.Writer) *DagJsonWriter {
+	if jw, ok := w.(*DagJsonWriter); ok {
+		return jw
+	}
+	return &DagJsonWriter{w}
+}
+
+func (d *DagJsonWriter) WriteArrayClose() error {
+	_, err := fmt.Fprintf(d.w, "]")
+	return err
+}
+
+func (d *DagJsonWriter) WriteArrayOpen() error {
+	_, err := fmt.Fprintf(d.w, "[")
+	return err
+}
+
+func (d *DagJsonWriter) WriteBigInt(n *big.Int) error {
+	_, err := fmt.Fprintf(d.w, `%s`, n.String())
+	return err
+}
+
+func (d *DagJsonWriter) WriteBool(b bool) error {
+	_, err := fmt.Fprintf(d.w, `%t`, b)
+	return err
+}
+
+func (d *DagJsonWriter) WriteBytes(b []byte) error {
+	_, err := fmt.Fprintf(d.w, `{"bytes":"%s"}`, base64.RawStdEncoding.EncodeToString(b))
+	return err
+}
+
+func (d *DagJsonWriter) WriteCid(c cid.Cid) error {
+	_, err := fmt.Fprintf(d.w, `{"/":"%s"}`, c)
+	return err
+}
+
+func (d *DagJsonWriter) WriteComma() error {
+	_, err := fmt.Fprintf(d.w, ",")
+	return err
+}
+
+func (d *DagJsonWriter) WriteInt64(n int64) error {
+	_, err := fmt.Fprintf(d.w, "%d", n)
+	return err
+}
+
+func (d *DagJsonWriter) WriteNull() error {
+	_, err := fmt.Fprintf(d.w, "null")
+	return err
+}
+
+func (d *DagJsonWriter) WriteObjectClose() error {
+	_, err := fmt.Fprintf(d.w, "}")
+	return err
+}
+
+func (d *DagJsonWriter) WriteObjectColon() error {
+	_, err := fmt.Fprintf(d.w, ":")
+	return err
+}
+
+func (d *DagJsonWriter) WriteObjectOpen() error {
+	_, err := fmt.Fprintf(d.w, "{")
+	return err
+}
+
+func (d *DagJsonWriter) WriteString(s string) error {
+	buf, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	_, err = d.w.Write(buf)
+	return err
+}
+
+func (d *DagJsonWriter) WriteUint8(n uint8) error {
+	_, err := fmt.Fprintf(d.w, "%d", n)
+	return err
+}
+
+func (d *DagJsonWriter) WriteUint64(n uint64) error {
+	_, err := fmt.Fprintf(d.w, "%d", n)
+	return err
+}
 
 var _ io.Reader = (*DagJsonReader)(nil)
 
 type DagJsonReader struct {
 	r    io.Reader
-	tk   json.Tokenizer
-	peek json.TokType
+	tk   jsontokenizer.Tokenizer
+	peek jsontokenizer.TokType
 }
 
 func NewDagJsonReader(r io.Reader) *DagJsonReader {
-	if r, ok := r.(*DagJsonReader); ok {
-		return r
+	if jr, ok := r.(*DagJsonReader); ok {
+		return jr
 	}
-	return &DagJsonReader{r, json.New(r), -1}
+	return &DagJsonReader{r, jsontokenizer.New(r), -1}
 }
 
-func (d *DagJsonReader) token() (json.TokType, error) {
+func (d *DagJsonReader) token() (jsontokenizer.TokType, error) {
 	if d.peek != -1 {
 		tok := d.peek
 		d.peek = -1
@@ -46,7 +144,7 @@ func (d *DagJsonReader) ReadNull() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokNull {
+	if tok != jsontokenizer.TokNull {
 		return fmt.Errorf("expected boolean but read %s", tokenName(tok))
 	}
 	return nil
@@ -62,7 +160,7 @@ func (d *DagJsonReader) PeekNull() (bool, error) {
 		return false, err
 	}
 	d.peek = tok
-	return tok == json.TokNull, nil
+	return tok == jsontokenizer.TokNull, nil
 }
 
 func (d *DagJsonReader) ReadBool() (bool, error) {
@@ -83,17 +181,82 @@ func (d *DagJsonReader) ReadBoolOrNull() (*bool, error) {
 		return nil, err
 	}
 	switch tok {
-	case json.TokTrue:
+	case jsontokenizer.TokTrue:
 		value = true
 		return &value, nil
-	case json.TokFalse:
+	case jsontokenizer.TokFalse:
 		value = false
 		return &value, nil
-	case json.TokNull:
+	case jsontokenizer.TokNull:
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("expected boolean but read %s", tokenName(tok))
 	}
+}
+
+func (d *DagJsonReader) ReadBytes(maxLength int64) ([]byte, error) {
+	b, err := d.ReadBytesOrNull(maxLength)
+	if err != nil {
+		return nil, nil
+	}
+	if b == nil {
+		return nil, errors.New("expected bytes but read null")
+	}
+	return *b, nil
+}
+
+func (d *DagJsonReader) ReadBytesOrNull(maxLength int64) (*[]byte, error) {
+	tok, err := d.token()
+	if err != nil {
+		return nil, err
+	}
+	if tok == jsontokenizer.TokNull {
+		return nil, nil
+	}
+	if tok != jsontokenizer.TokObjectOpen {
+		return nil, fmt.Errorf("expected object open but read %s", tokenName(tok))
+	}
+	if err := d.ReadObjectOpen(); err != nil {
+		return nil, err
+	}
+	slash, err := d.ReadString(1)
+	if err != nil {
+		return nil, err
+	}
+	if slash != "/" {
+		return nil, fmt.Errorf("expected / but read %s", slash)
+	}
+	if err := d.ReadObjectColon(); err != nil {
+		return nil, err
+	}
+	if err := d.ReadObjectOpen(); err != nil {
+		return nil, err
+	}
+	bytesKey, err := d.ReadString(5)
+	if err != nil {
+		return nil, err
+	}
+	if bytesKey != "bytes" {
+		return nil, fmt.Errorf("expected \"bytes\" but read %s", slash)
+	}
+	if err := d.ReadObjectColon(); err != nil {
+		return nil, err
+	}
+	s, err := d.ReadString(maxLength)
+	if err != nil {
+		return nil, err
+	}
+	decoded, err := base64.RawStdEncoding.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.ReadObjectClose(); err != nil {
+		return nil, err
+	}
+	if err := d.ReadObjectClose(); err != nil {
+		return nil, err
+	}
+	return &decoded, nil
 }
 
 func (d *DagJsonReader) ReadCid() (cid.Cid, error) {
@@ -112,11 +275,11 @@ func (d *DagJsonReader) ReadCidOrNull() (*cid.Cid, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok == json.TokNull {
+	if tok == jsontokenizer.TokNull {
 		return nil, nil
 	}
-	if err := d.ReadObjectOpen(); err != nil {
-		return nil, err
+	if tok != jsontokenizer.TokObjectOpen {
+		return nil, fmt.Errorf("expected object open but read %s", tokenName(tok))
 	}
 	slash, err := d.ReadString(1)
 	if err != nil {
@@ -151,7 +314,7 @@ func (d *DagJsonReader) ReadNumberAsUint8() (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	if tok != json.TokNumber {
+	if tok != jsontokenizer.TokNumber {
 		return 0, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
@@ -181,7 +344,10 @@ func (d *DagJsonReader) ReadNumberAsInt64OrNull() (*int64, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok != json.TokNumber {
+	if tok == jsontokenizer.TokNull {
+		return nil, nil
+	}
+	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
@@ -211,7 +377,10 @@ func (d *DagJsonReader) ReadNumberAsUint64OrNull() (*uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok != json.TokNumber {
+	if tok == jsontokenizer.TokNull {
+		return nil, nil
+	}
+	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
@@ -230,7 +399,7 @@ func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int64) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok != json.TokNumber {
+	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
@@ -260,7 +429,10 @@ func (d *DagJsonReader) ReadStringOrNull(maxLength int64) (*string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok != json.TokString {
+	if tok == jsontokenizer.TokNull {
+		return nil, nil
+	}
+	if tok != jsontokenizer.TokString {
 		return nil, fmt.Errorf("expected string but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
@@ -276,7 +448,7 @@ func (d *DagJsonReader) ReadObjectColon() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokObjectColon {
+	if tok != jsontokenizer.TokObjectColon {
 		return fmt.Errorf("expected object colon but read %s", tokenName(tok))
 	}
 	return nil
@@ -287,7 +459,7 @@ func (d *DagJsonReader) ReadObjectOpen() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokObjectOpen {
+	if tok != jsontokenizer.TokObjectOpen {
 		return fmt.Errorf("expected object open but read %s", tokenName(tok))
 	}
 	return nil
@@ -298,7 +470,7 @@ func (d *DagJsonReader) ReadObjectClose() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokObjectClose {
+	if tok != jsontokenizer.TokObjectClose {
 		return fmt.Errorf("expected object close but read %s", tokenName(tok))
 	}
 	return nil
@@ -311,9 +483,9 @@ func (d *DagJsonReader) ReadObjectCloseOrComma() (bool, error) {
 		return false, err
 	}
 	switch tok {
-	case json.TokObjectClose:
+	case jsontokenizer.TokObjectClose:
 		return true, nil
-	case json.TokComma:
+	case jsontokenizer.TokComma:
 		return false, nil
 	default:
 		return false, fmt.Errorf("expected object close or comma but read %s", tokenName(tok))
@@ -325,10 +497,24 @@ func (d *DagJsonReader) ReadArrayOpen() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokArrayOpen {
+	if tok != jsontokenizer.TokArrayOpen {
 		return fmt.Errorf("expected array open but read %s", tokenName(tok))
 	}
 	return nil
+}
+
+func (d *DagJsonReader) ReadArrayOpenOrNull() (bool, error) {
+	tok, err := d.token()
+	if err != nil {
+		return false, err
+	}
+	if tok == jsontokenizer.TokNull {
+		return false, nil
+	}
+	if tok != jsontokenizer.TokArrayOpen {
+		return false, fmt.Errorf("expected array open but read %s", tokenName(tok))
+	}
+	return true, nil
 }
 
 func (d *DagJsonReader) ReadArrayClose() error {
@@ -336,7 +522,7 @@ func (d *DagJsonReader) ReadArrayClose() error {
 	if err != nil {
 		return err
 	}
-	if tok != json.TokArrayClose {
+	if tok != jsontokenizer.TokArrayClose {
 		return fmt.Errorf("expected array close but read %s", tokenName(tok))
 	}
 	return nil
@@ -349,26 +535,26 @@ func (d *DagJsonReader) ReadArrayCloseOrComma() (bool, error) {
 		return false, err
 	}
 	switch tok {
-	case json.TokArrayClose:
+	case jsontokenizer.TokArrayClose:
 		return true, nil
-	case json.TokComma:
+	case jsontokenizer.TokComma:
 		return false, nil
 	default:
 		return false, fmt.Errorf("expected array close or comma but read %s", tokenName(tok))
 	}
 }
 
-func tokenName(tok json.TokType) string {
+func tokenName(tok jsontokenizer.TokType) string {
 	switch tok {
-	case json.TokNull:
+	case jsontokenizer.TokNull:
 		return "null"
-	case json.TokTrue, json.TokFalse:
+	case jsontokenizer.TokTrue, jsontokenizer.TokFalse:
 		return "boolean"
-	case json.TokArrayOpen, json.TokArrayClose, json.TokObjectOpen, json.TokObjectClose, json.TokObjectColon, json.TokComma:
+	case jsontokenizer.TokArrayOpen, jsontokenizer.TokArrayClose, jsontokenizer.TokObjectOpen, jsontokenizer.TokObjectClose, jsontokenizer.TokObjectColon, jsontokenizer.TokComma:
 		return "delimiter"
-	case json.TokNumber:
+	case jsontokenizer.TokNumber:
 		return "number"
-	case json.TokString:
+	case jsontokenizer.TokString:
 		return "string"
 	default:
 		return "unknown"

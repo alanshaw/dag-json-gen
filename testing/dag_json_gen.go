@@ -3,8 +3,6 @@
 package testing
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -20,45 +18,40 @@ var _ = math.E
 var _ = sort.Sort
 
 func (t *SignedArray) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Signed ([]uint64) (slice)
 	if len(t.Signed) > 8192 {
 		return fmt.Errorf("Slice value in field t.Signed was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Signed {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteUint64(uint64(v)); err != nil {
+			return err
 		}
 
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -76,33 +69,17 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Signed ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Signed: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Signed = make([]uint64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Signed = []uint64{}
+		item := make([]uint64, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -110,13 +87,24 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Signed[i] = uint64(nval)
+				item[0] = uint64(nval)
 
+			}
+			t.Signed = append(t.Signed, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Signed: slice too large")
 			}
 
 		}
 	}
-
 	if err := jr.ReadArrayClose(); err != nil {
 		return err
 	}
@@ -124,131 +112,96 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Foo (string) (string)
 	if len(t.Foo) > 8192 {
 		return fmt.Errorf("Value in field t.Foo was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.Foo)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteString(string(t.Foo)); err != nil {
 		return err
 	}
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Value (uint64) (uint64)
 
-	{
-		buf, err := json.Marshal(t.Value)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteUint64(uint64(t.Value)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Binary ([]uint8) (slice)
 	if len(t.Binary) > 2097152 {
 		return fmt.Errorf("Byte array in field t.Binary was too long")
 	}
 
-	if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(t.Binary))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("\"}")); err != nil {
+	if err := jw.WriteBytes(t.Binary); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Signed (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Signed)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Signed)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.NString (testing.NamedString) (string)
 	if len(t.NString) > 8192 {
 		return fmt.Errorf("Value in field t.NString was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.NString)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteString(string(t.NString)); err != nil {
 		return err
 	}
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Strings ([]string) (slice)
 	if len(t.Strings) > 8192 {
 		return fmt.Errorf("Slice value in field t.Strings was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Strings {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 		if len(v) > 8192 {
 			return fmt.Errorf("Value in field v was too long")
 		}
-
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteString(string(v)); err != nil {
+			return err
 		}
-
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -266,6 +219,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Foo (string) (string)
 
 	{
@@ -276,14 +230,15 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		t.Foo = string(sval)
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 6")
 		}
 	}
+
 	// t.Value (uint64) (uint64)
 
 	{
@@ -296,45 +251,35 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 6")
 		}
 	}
+
 	// t.Binary ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 2097152 {
-		return fmt.Errorf("t.Binary: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-
-	if extra > 0 {
-		t.Binary = make([]uint8, extra)
-	}
-
-	if _, err := io.ReadFull(cr, t.Binary); err != nil {
-		return err
-	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
 			return err
 		}
-		if end {
+		t.Binary = []uint8(bval)
+	}
+
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
 			return fmt.Errorf("json input has too few fields 3 < 6")
 		}
 	}
+
 	// t.Signed (int64) (int64)
 
 	{
@@ -347,14 +292,15 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 4 < 6")
 		}
 	}
+
 	// t.NString (testing.NamedString) (string)
 
 	{
@@ -365,53 +311,48 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		t.NString = NamedString(sval)
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 5 < 6")
 		}
 	}
+
 	// t.Strings ([]string) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Strings: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Strings = make([]string, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Strings = []string{}
+		item := make([]string, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 				sval, err := jr.ReadString(8192)
 				if err != nil {
 					return err
 				}
-				t.Strings[i] = string(sval)
+				item[0] = string(sval)
+			}
+			t.Strings = append(t.Strings, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Strings: slice too large")
 			}
 
 		}
 	}
-
 	if err := jr.ReadArrayClose(); err != nil {
 		return err
 	}
@@ -419,98 +360,90 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
-	if err := t.Stuff.MarshalDagJSON(w); err != nil {
+	if err := t.Stuff.MarshalDagJSON(jw); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Others ([]uint64) (slice)
 	if len(t.Others) > 8192 {
 		return fmt.Errorf("Slice value in field t.Others was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Others {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteUint64(uint64(v)); err != nil {
+			return err
 		}
 
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.SignedOthers ([]int64) (slice)
 	if len(t.SignedOthers) > 8192 {
 		return fmt.Errorf("Slice value in field t.SignedOthers was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.SignedOthers {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				return err
-			}
-		}
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
+		if err := jw.WriteInt64(int64(v)); err != nil {
+			return err
+		}
+
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Test ([][]uint8) (slice)
 	if len(t.Test) > 8192 {
 		return fmt.Errorf("Slice value in field t.Test was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Test {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
@@ -518,136 +451,111 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 			return fmt.Errorf("Byte array in field v was too long")
 		}
 
-		if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-			return err
-		}
-		if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(v))); err != nil {
-			return err
-		}
-		if _, err := w.Write([]byte("\"}")); err != nil {
+		if err := jw.WriteBytes(v); err != nil {
 			return err
 		}
 
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Dog (string) (string)
 	if len(t.Dog) > 8192 {
 		return fmt.Errorf("Value in field t.Dog was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.Dog)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteString(string(t.Dog)); err != nil {
 		return err
 	}
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Numbers ([]testing.NamedNumber) (slice)
 	if len(t.Numbers) > 8192 {
 		return fmt.Errorf("Slice value in field t.Numbers was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Numbers {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteUint64(uint64(v)); err != nil {
+			return err
 		}
 
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Pizza (uint64) (uint64)
 
 	if t.Pizza == nil {
-		if _, err := w.Write([]byte("null")); err != nil {
+		if err := jw.WriteNull(); err != nil {
 			return err
 		}
 	} else {
-		buf, err := json.Marshal(*t.Pizza)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
+		if err := jw.WriteUint64(uint64(*t.Pizza)); err != nil {
 			return err
 		}
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	if t.PointyPizza == nil {
-		if _, err := w.Write([]byte("null")); err != nil {
+		if err := jw.WriteNull(); err != nil {
 			return err
 		}
 	} else {
-		buf, err := json.Marshal(*t.PointyPizza)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
+		if err := jw.WriteUint64(uint64(*t.PointyPizza)); err != nil {
 			return err
 		}
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 	if len(t.Arrrrrghay) > 8192 {
 		return fmt.Errorf("Slice value in field t.Arrrrrghay was too long")
 	}
-
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Arrrrrghay {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
-		if err := v.MarshalDagJSON(w); err != nil {
+		if err := v.MarshalDagJSON(jw); err != nil {
 			return err
 		}
-
-		if _, err := w.Write([]byte("]")); err != nil {
+		if err := jw.WriteArrayClose(); err != nil {
 			return err
 		}
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -665,10 +573,10 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
 
 	{
-
 		null, err := jr.PeekNull()
 		if err != nil {
 			return err
@@ -679,48 +587,32 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 		} else {
 			t.Stuff = new(SimpleTypeTwo)
-			if err := t.Stuff.UnmarshalCBOR(jr); err != nil {
+			if err := t.Stuff.UnmarshalDagJSON(jr); err != nil {
 				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
-
 	}
+
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 9")
 		}
 	}
+
 	// t.Others ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Others: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Others = make([]uint64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Others = []uint64{}
+		item := make([]uint64, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -728,49 +620,44 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Others[i] = uint64(nval)
+				item[0] = uint64(nval)
 
+			}
+			t.Others = append(t.Others, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Others: slice too large")
 			}
 
 		}
 	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 9")
 		}
 	}
+
 	// t.SignedOthers ([]int64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.SignedOthers: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.SignedOthers = make([]int64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.SignedOthers = []int64{}
+		item := make([]int64, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -778,82 +665,78 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.SignedOthers[i] = int64(nval)
+				item[0] = int64(nval)
 
 			}
+			t.SignedOthers = append(t.SignedOthers, item[0])
 
-		}
-	}
-
-	{
-		end, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
-			return err
-		}
-		if end {
-			return fmt.Errorf("json input has too few fields 3 < 9")
-		}
-	}
-	// t.Test ([][]uint8) (slice)
-
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 8192 {
-		return fmt.Errorf("t.Test: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Test = make([][]uint8, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
-
-			maj, extra, err = cr.ReadHeader()
+			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
 				return err
 			}
-
-			if extra > 2097152 {
-				return fmt.Errorf("t.Test[i]: byte array too large (%d)", extra)
+			if close {
+				break
 			}
-			if maj != cbg.MajByteString {
-				return fmt.Errorf("expected byte array")
-			}
-
-			if extra > 0 {
-				t.Test[i] = make([]uint8, extra)
-			}
-
-			if _, err := io.ReadFull(cr, t.Test[i]); err != nil {
-				return err
+			if i == 8192-1 {
+				return fmt.Errorf("t.SignedOthers: slice too large")
 			}
 
 		}
 	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
+			return fmt.Errorf("json input has too few fields 3 < 9")
+		}
+	}
+
+	// t.Test ([][]uint8) (slice)
+
+	{
+
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Test = [][]uint8{}
+		item := make([][]uint8, 0, 1)
+		for i := 0; i < 8192; i++ {
+
+			{
+				bval, err := jr.ReadBytes(2097152)
+				if err != nil {
+					return err
+				}
+				item[0] = []uint8(bval)
+			}
+
+			t.Test = append(t.Test, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Test: slice too large")
+			}
+
+		}
+	}
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
 			return fmt.Errorf("json input has too few fields 4 < 9")
 		}
 	}
+
 	// t.Dog (string) (string)
 
 	{
@@ -864,41 +747,25 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		t.Dog = string(sval)
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 5 < 9")
 		}
 	}
+
 	// t.Numbers ([]testing.NamedNumber) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Numbers: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Numbers = make([]NamedNumber, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Numbers = []NamedNumber{}
+		item := make([]NamedNumber, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -906,22 +773,34 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Numbers[i] = NamedNumber(nval)
+				item[0] = NamedNumber(nval)
 
+			}
+			t.Numbers = append(t.Numbers, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Numbers: slice too large")
 			}
 
 		}
 	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 6 < 9")
 		}
 	}
+
 	// t.Pizza (uint64) (uint64)
 
 	{
@@ -937,14 +816,15 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 7 < 9")
 		}
 	}
+
 	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	{
@@ -960,52 +840,39 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 8 < 9")
 		}
 	}
+
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 8192 {
-		return fmt.Errorf("t.Arrrrrghay: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	if extra != 3 {
-		return fmt.Errorf("expected array to have 3 elements")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return nil
 	}
 
 	t.Arrrrrghay = [3]SimpleTypeOne{}
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+	for i := 0; i < 8192; i++ {
 
-			{
+		if err := t.Arrrrrghay[i].UnmarshalDagJSON(jr); err != nil {
+			return fmt.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
+		}
 
-				if err := t.Arrrrrghay[i].UnmarshalCBOR(jr); err != nil {
-					return fmt.Errorf("unmarshaling t.Arrrrrghay[i]: %w", err)
-				}
-
-			}
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
+			break
+		}
+		if i == 8192-1 {
+			return fmt.Errorf("t.Arrrrrghay: array too large")
 		}
 	}
-
 	if err := jr.ReadArrayClose(); err != nil {
 		return err
 	}
@@ -1013,43 +880,38 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *DeferredContainer) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Stuff (testing.SimpleTypeOne) (struct)
-	if err := t.Stuff.MarshalDagJSON(w); err != nil {
+	if err := t.Stuff.MarshalDagJSON(jw); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Deferred (typegen.Deferred) (struct)
-	if err := t.Deferred.MarshalDagJSON(w); err != nil {
+	if err := t.Deferred.MarshalDagJSON(jw); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Value (uint64) (uint64)
 
-	{
-		buf, err := json.Marshal(t.Value)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+	if err := jw.WriteUint64(uint64(t.Value)); err != nil {
+		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1067,10 +929,10 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Stuff (testing.SimpleTypeOne) (struct)
 
 	{
-
 		null, err := jr.PeekNull()
 		if err != nil {
 			return err
@@ -1081,40 +943,39 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 		} else {
 			t.Stuff = new(SimpleTypeOne)
-			if err := t.Stuff.UnmarshalCBOR(jr); err != nil {
+			if err := t.Stuff.UnmarshalDagJSON(jr); err != nil {
 				return fmt.Errorf("unmarshaling t.Stuff pointer: %w", err)
 			}
 		}
-
 	}
+
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
+
 	// t.Deferred (typegen.Deferred) (struct)
 
-	{
+	t.Deferred = new(jsg.Deferred)
 
-		t.Deferred = new(jsg.Deferred)
-
-		if err := t.Deferred.UnmarshalCBOR(jr); err != nil {
-			return fmt.Errorf("failed to read deferred field: %w", err)
-		}
+	if err := t.Deferred.UnmarshalDagJSON(jr); err != nil {
+		return fmt.Errorf("failed to read deferred field: %w", err)
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
+
 	// t.Value (uint64) (uint64)
 
 	{
@@ -1133,78 +994,60 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *FixedArrays) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Bytes ([20]uint8) (array)
 	if len(t.Bytes) > 2097152 {
 		return fmt.Errorf("Byte array in field t.Bytes was too long")
 	}
+	if err := jw.WriteBytes(t.Bytes[:]); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
 
-	if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(t.Bytes[:]))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("\"}")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Uint8 ([20]uint8) (array)
 	if len(t.Uint8) > 2097152 {
 		return fmt.Errorf("Byte array in field t.Uint8 was too long")
 	}
+	if err := jw.WriteBytes(t.Uint8[:]); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
 
-	if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(t.Uint8[:]))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("\"}")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Uint64 ([20]uint64) (array)
 	if len(t.Uint64) > 8192 {
 		return fmt.Errorf("Slice value in field t.Uint64 was too long")
 	}
-
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Uint64 {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteUint64(uint64(v)); err != nil {
+			return err
 		}
 
-		if _, err := w.Write([]byte("]")); err != nil {
+		if err := jw.WriteArrayClose(); err != nil {
 			return err
 		}
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1222,108 +1065,73 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Bytes ([20]uint8) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 2097152 {
-		return fmt.Errorf("t.Bytes: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
-	}
-
-	t.Bytes = [20]uint8{}
-	if _, err := io.ReadFull(cr, t.Bytes[:]); err != nil {
-		return err
-	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
 			return err
 		}
-		if end {
+		t.Bytes = [20]uint8(bval)
+	}
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
+
 	// t.Uint8 ([20]uint8) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 2097152 {
-		return fmt.Errorf("t.Uint8: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
-	}
-
-	t.Uint8 = [20]uint8{}
-	if _, err := io.ReadFull(cr, t.Uint8[:]); err != nil {
-		return err
-	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
 			return err
 		}
-		if end {
+		t.Uint8 = [20]uint8(bval)
+	}
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
+
 	// t.Uint64 ([20]uint64) (array)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 8192 {
-		return fmt.Errorf("t.Uint64: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-	if extra != 20 {
-		return fmt.Errorf("expected array to have 20 elements")
+	if err := jr.ReadArrayOpen(); err != nil {
+		return nil
 	}
 
 	t.Uint64 = [20]uint64{}
-	for i := 0; i < int(extra); i++ {
+	for i := 0; i < 8192; i++ {
 		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
 
-			{
-
-				nval, err := jr.ReadNumberAsUint64()
-				if err != nil {
-					return err
-				}
-				t.Uint64[i] = uint64(nval)
-
+			nval, err := jr.ReadNumberAsUint64()
+			if err != nil {
+				return err
 			}
+			t.Uint64[i] = uint64(nval)
+
+		}
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
+			break
+		}
+		if i == 8192-1 {
+			return fmt.Errorf("t.Uint64: array too large")
 		}
 	}
-
 	if err := jr.ReadArrayClose(); err != nil {
 		return err
 	}
@@ -1331,52 +1139,41 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *ThingWithSomeTime) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.When (typegen.DagJsonTime) (struct)
-	if err := t.When.MarshalDagJSON(w); err != nil {
+	if err := t.When.MarshalDagJSON(jw); err != nil {
+		return err
+	}
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
-		return err
-	}
 	// t.Stuff (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Stuff)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Stuff)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.CatName (string) (string)
 	if len(t.CatName) > 8192 {
 		return fmt.Errorf("Value in field t.CatName was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.CatName)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+	if err := jw.WriteString(string(t.CatName)); err != nil {
+		return err
 	}
-
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1394,24 +1191,23 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.When (typegen.DagJsonTime) (struct)
 
-	{
-
-		if err := t.When.UnmarshalCBOR(jr); err != nil {
-			return fmt.Errorf("unmarshaling t.When: %w", err)
-		}
-
+	if err := t.When.UnmarshalDagJSON(jr); err != nil {
+		return fmt.Errorf("unmarshaling t.When: %w", err)
 	}
+
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
+
 	// t.Stuff (int64) (int64)
 
 	{
@@ -1424,14 +1220,15 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
+
 	// t.CatName (string) (string)
 
 	{
@@ -1448,30 +1245,25 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *BigField) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.LargeBytes ([]uint8) (slice)
-	if len(t.LargeBytes) > 2097152 {
+	if len(t.LargeBytes) > 10000000 {
 		return fmt.Errorf("Byte array in field t.LargeBytes was too long")
 	}
 
-	if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(t.LargeBytes))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("\"}")); err != nil {
+	if err := jw.WriteBytes(t.LargeBytes); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1489,26 +1281,15 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.LargeBytes ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 2097152 {
-		return fmt.Errorf("t.LargeBytes: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-
-	if extra > 0 {
-		t.LargeBytes = make([]uint8, extra)
-	}
-
-	if _, err := io.ReadFull(cr, t.LargeBytes); err != nil {
-		return err
+	{
+		bval, err := jr.ReadBytes(10000000)
+		if err != nil {
+			return err
+		}
+		t.LargeBytes = []uint8(bval)
 	}
 
 	if err := jr.ReadArrayClose(); err != nil {
@@ -1518,46 +1299,32 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *IntArray) MarshalDagJSON(w io.Writer) error {
-	if t == nil {
-		_, err := w.Write([]byte("null"))
-		return err
-	}
+	jw := jsg.NewDagJsonWriter(w)
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Ints ([]int64) (slice)
 	if len(t.Ints) > 8192 {
 		return fmt.Errorf("Slice value in field t.Ints was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Ints {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				return err
-			}
-		}
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
+		if err := jw.WriteInt64(int64(v)); err != nil {
+			return err
+		}
+
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -1565,41 +1332,17 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArray{}
 
 	jr := jsg.NewDagJsonReader(r)
-	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
-	if err := jr.ReadArrayOpen(); err != nil {
-		return err
-	}
+
 	// t.Ints ([]int64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Ints: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Ints = make([]int64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Ints = []int64{}
+		item := make([]int64, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -1607,60 +1350,54 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Ints[i] = int64(nval)
+				item[0] = int64(nval)
 
+			}
+			t.Ints = append(t.Ints, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Ints: slice too large")
 			}
 
 		}
-	}
-
-	if err := jr.ReadArrayClose(); err != nil {
-		return err
 	}
 	return nil
 }
 
 func (t *IntAliasArray) MarshalDagJSON(w io.Writer) error {
-	if t == nil {
-		_, err := w.Write([]byte("null"))
-		return err
-	}
+	jw := jsg.NewDagJsonWriter(w)
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Ints ([]testing.IntAlias) (slice)
 	if len(t.Ints) > 8192 {
 		return fmt.Errorf("Slice value in field t.Ints was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Ints {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				return err
-			}
-		}
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
+		if err := jw.WriteInt64(int64(v)); err != nil {
+			return err
+		}
+
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -1668,41 +1405,17 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntAliasArray{}
 
 	jr := jsg.NewDagJsonReader(r)
-	defer func() {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-	}()
-	if err := jr.ReadArrayOpen(); err != nil {
-		return err
-	}
+
 	// t.Ints ([]testing.IntAlias) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("t.Ints: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Ints = make([]IntAlias, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Ints = []IntAlias{}
+		item := make([]IntAlias, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -1710,68 +1423,64 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Ints[i] = IntAlias(nval)
+				item[0] = IntAlias(nval)
 
+			}
+			t.Ints = append(t.Ints, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("t.Ints: slice too large")
 			}
 
 		}
-	}
-
-	if err := jr.ReadArrayClose(); err != nil {
-		return err
 	}
 	return nil
 }
 
 func (t *TupleIntArray) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Int1 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int1)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Int1)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Int2 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int2)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Int2)); err != nil {
 		return err
 	}
-	// t.Int3 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int3)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	// t.Int3 (int64) (int64)
+
+	if err := jw.WriteInt64(int64(t.Int3)); err != nil {
+		return err
+	}
+
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1789,6 +1498,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Int1 (int64) (int64)
 
 	{
@@ -1801,14 +1511,15 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
+
 	// t.Int2 (int64) (int64)
 
 	{
@@ -1821,14 +1532,15 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
+
 	// t.Int3 (int64) (int64)
 
 	{
@@ -1847,78 +1559,64 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *TupleIntArrayOptionals) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Int1 (int64) (int64)
+
 	if t.Int1 == nil {
-		if _, err := w.Write([]byte("null")); err != nil {
+		if err := jw.WriteNull(); err != nil {
 			return err
 		}
 	} else {
-		buf, err := json.Marshal(*t.Int1)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
+		if err := jw.WriteInt64(int64(*t.Int1)); err != nil {
 			return err
 		}
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Int2 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int2)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Int2)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Int3 (uint64) (uint64)
 
-	{
-		buf, err := json.Marshal(t.Int3)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteUint64(uint64(t.Int3)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Int4 (uint64) (uint64)
 
 	if t.Int4 == nil {
-		if _, err := w.Write([]byte("null")); err != nil {
+		if err := jw.WriteNull(); err != nil {
 			return err
 		}
 	} else {
-		buf, err := json.Marshal(*t.Int4)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
+		if err := jw.WriteUint64(uint64(*t.Int4)); err != nil {
 			return err
 		}
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -1936,6 +1634,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Int1 (int64) (int64)
 
 	{
@@ -1951,14 +1650,15 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 4")
 		}
 	}
+
 	// t.Int2 (int64) (int64)
 
 	{
@@ -1971,14 +1671,15 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 4")
 		}
 	}
+
 	// t.Int3 (uint64) (uint64)
 
 	{
@@ -1991,14 +1692,15 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 3 < 4")
 		}
 	}
+
 	// t.Int4 (uint64) (uint64)
 
 	{
@@ -2020,42 +1722,32 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *IntArrayNewType) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// (*t) (testing.IntArrayNewType) (slice)
 	if len((*t)) > 8192 {
 		return fmt.Errorf("Slice value in field (*t) was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range *t {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				return err
-			}
-		}
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
+		if err := jw.WriteInt64(int64(v)); err != nil {
+			return err
+		}
+
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -2063,33 +1755,17 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArrayNewType{}
 
 	jr := jsg.NewDagJsonReader(r)
+
 	// (*t) (testing.IntArrayNewType) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("(*t): array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		(*t) = make([]int64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		(*t) = []int64{}
+		item := make([]int64, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -2097,53 +1773,54 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				(*t)[i] = int64(nval)
+				item[0] = int64(nval)
 
+			}
+			(*t) = append((*t), item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("(*t): slice too large")
 			}
 
 		}
 	}
-
 	return nil
 }
 
 func (t *IntArrayAliasNewType) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 	if len((*t)) > 8192 {
 		return fmt.Errorf("Slice value in field (*t) was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range *t {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				return err
-			}
-		}
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
+		if err := jw.WriteInt64(int64(v)); err != nil {
+			return err
+		}
+
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -2151,33 +1828,17 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = IntArrayAliasNewType{}
 
 	jr := jsg.NewDagJsonReader(r)
+
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 8192 {
-		return fmt.Errorf("(*t): array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		(*t) = make([]IntAlias, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		(*t) = []IntAlias{}
+		item := make([]IntAlias, 0, 1)
+		for i := 0; i < 8192; i++ {
 
 			{
 
@@ -2185,28 +1846,37 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				(*t)[i] = IntAlias(nval)
+				item[0] = IntAlias(nval)
 
+			}
+			(*t) = append((*t), item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 8192-1 {
+				return fmt.Errorf("(*t): slice too large")
 			}
 
 		}
 	}
-
 	return nil
 }
 
 func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// (*t) (testing.MapTransparentType) (map)
 	{
 		if len((*t)) > 4096 {
 			return fmt.Errorf("cannot marshal (*t) map too large")
 		}
 
-		if _, err := w.Write([]byte("{")); err != nil {
+		if err := jw.WriteObjectOpen(); err != nil {
 			return err
 		}
 
@@ -2217,7 +1887,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 		sort.Strings(keys)
 		for i, k := range keys {
 			if i > 0 {
-				if _, err := w.Write([]byte(",")); err != nil {
+				if err := jw.WriteComma(); err != nil {
 					return err
 				}
 			}
@@ -2225,44 +1895,25 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 			if len(k) > 8192 {
 				return fmt.Errorf("Value in field k was too long")
 			}
-
-			{
-				buf, err := json.Marshal(k)
-				if err != nil {
-					return err
-				}
-				if _, err := w.Write(buf); err != nil {
-					return err
-				}
+			if err := jw.WriteString(string(k)); err != nil {
+				return err
 			}
-
-			if _, err := w.Write([]byte(":")); err != nil {
+			if err := jw.WriteObjectColon(); err != nil {
 				return err
 			}
 
 			if len(v) > 8192 {
 				return fmt.Errorf("Value in field v was too long")
 			}
-
-			{
-				buf, err := json.Marshal(v)
-				if err != nil {
-					return err
-				}
-				if _, err := w.Write(buf); err != nil {
-					return err
-				}
+			if err := jw.WriteString(string(v)); err != nil {
+				return err
 			}
-
 		}
-		if _, err := w.Write([]byte("}")); err != nil {
+		if err := jw.WriteObjectClose(); err != nil {
 			return err
 		}
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -2270,25 +1921,17 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 	*t = MapTransparentType{}
 
 	jr := jsg.NewDagJsonReader(r)
+
 	// (*t) (testing.MapTransparentType) (map)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
+	if err := jr.ReadObjectOpen(); err != nil {
 		return err
 	}
-	if maj != cbg.MajMap {
-		return fmt.Errorf("expected a map (major type 5)")
-	}
-	if extra > 4096 {
-		return fmt.Errorf("(*t): map too large")
-	}
 
-	(*t) = make(map[string]string, extra)
+	(*t) = map[string]string{}
 
-	for i, l := 0, int(extra); i < l; i++ {
-
+	for i, l := 0, 8192; i < l; i++ {
 		var k string
-
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
@@ -2296,8 +1939,10 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 			k = string(sval)
 		}
+		if err := jr.ReadObjectColon(); err != nil {
+			return err
+		}
 		var v string
-
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
@@ -2306,37 +1951,42 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 			v = string(sval)
 		}
 		(*t)[k] = v
-
+		close, err := jr.ReadObjectCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
+			break
+		}
 	}
 
 	return nil
 }
 
 func (t *BigIntContainer) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Int (big.Int) (struct)
-	{
-		if t.Int != nil && t.Int.Sign() < 0 {
-			return fmt.Errorf("Value in field t.Int was a negative big-integer (not supported)")
+	if t.Int != nil && t.Int.Sign() < 0 {
+		return fmt.Errorf("Value in field t.Int was a negative big-integer (not supported)")
+	}
+	if t.Int == nil {
+		if err := jw.WriteNull(); err != nil {
+			return err
 		}
-		if t.Int == nil {
-			if _, err := w.Write([]byte("null")); err != nil {
-				return err
-			}
-		} else {
-			if _, err := w.Write([]byte(t.Int.String())); err != nil {
-				return err
-			}
+	} else {
+		if err := jw.WriteBigInt(t.Int); err != nil {
+			return err
 		}
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -2354,6 +2004,7 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Int (big.Int) (struct)
 
 	{
@@ -2370,69 +2021,52 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 }
 
 func (t *TupleWithOptionalFields) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Int1 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int1)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Int1)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Uint2 (uint64) (uint64)
 
-	{
-		buf, err := json.Marshal(t.Uint2)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
-
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteUint64(uint64(t.Uint2)); err != nil {
 		return err
 	}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
+	}
+
 	// t.Int3 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int3)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
-	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteInt64(int64(t.Int3)); err != nil {
 		return err
 	}
-	// t.Int4 (int64) (int64)
-	{
-		buf, err := json.Marshal(t.Int4)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+
+	if err := jw.WriteComma(); err != nil {
+		return err
 	}
 
-	if _, err := w.Write([]byte("]")); err != nil {
+	// t.Int4 (int64) (int64)
+
+	if err := jw.WriteInt64(int64(t.Int4)); err != nil {
+		return err
+	}
+
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -2450,6 +2084,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Int1 (int64) (int64)
 
 	{
@@ -2462,14 +2097,15 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
-			return fmt.Errorf("json input has too few fields 1 < 4")
+		if close {
+			return fmt.Errorf("json input has too few fields 1 < 2")
 		}
 	}
+
 	// t.Uint2 (uint64) (uint64)
 
 	{
@@ -2481,15 +2117,10 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		t.Uint2 = uint64(nval)
 
 	}
-	{
-		end, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
-			return err
-		}
-		if end {
-			return fmt.Errorf("json input has too few fields 2 < 4")
-		}
+	if _, err := jr.ReadArrayCloseOrComma(); err != nil {
+		return err
 	}
+
 	// t.Int3 (int64) (int64)
 
 	{
@@ -2501,15 +2132,10 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		t.Int3 = int64(nval)
 
 	}
-	{
-		end, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
-			return err
-		}
-		if end {
-			return fmt.Errorf("json input has too few fields 3 < 4")
-		}
+	if _, err := jr.ReadArrayCloseOrComma(); err != nil {
+		return err
 	}
+
 	// t.Int4 (int64) (int64)
 
 	{

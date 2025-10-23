@@ -3,8 +3,6 @@
 package testing
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -19,81 +17,64 @@ var _ = math.E
 var _ = sort.Sort
 
 func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Arr ([]uint64) (slice)
 	if len(t.Arr) > 10 {
 		return fmt.Errorf("Slice value in field t.Arr was too long")
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 	for i, v := range t.Arr {
 		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
 
-		{
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			if _, err := w.Write(buf); err != nil {
-				return err
-			}
+		if err := jw.WriteUint64(uint64(v)); err != nil {
+			return err
 		}
 
 	}
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Byts ([]uint8) (slice)
 	if len(t.Byts) > 9 {
 		return fmt.Errorf("Byte array in field t.Byts was too long")
 	}
 
-	if _, err := w.Write([]byte("{\"bytes\":\"")); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(base64.RawStdEncoding.EncodeToString(t.Byts))); err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte("\"}")); err != nil {
+	if err := jw.WriteBytes(t.Byts); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(",")); err != nil {
+	if err := jw.WriteComma(); err != nil {
 		return err
 	}
+
 	// t.Str (string) (string)
 	if len(t.Str) > 8 {
 		return fmt.Errorf("Value in field t.Str was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.Str)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+	if err := jw.WriteString(string(t.Str)); err != nil {
+		return err
 	}
-
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -111,33 +92,17 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Arr ([]uint64) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
+	{
 
-	if extra > 10 {
-		return fmt.Errorf("t.Arr: array too large (%d)", extra)
-	}
-
-	if maj != cbg.MajArray {
-		return fmt.Errorf("expected cbor array")
-	}
-
-	if extra > 0 {
-		t.Arr = make([]uint64, extra)
-	}
-
-	for i := 0; i < int(extra); i++ {
-		{
-			var maj byte
-			var extra uint64
-			var err error
-			_ = maj
-			_ = extra
-			_ = err
+		if err := jr.ReadArrayOpen(); err != nil {
+			return err
+		}
+		t.Arr = []uint64{}
+		item := make([]uint64, 0, 1)
+		for i := 0; i < 10; i++ {
 
 			{
 
@@ -145,53 +110,54 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 				if err != nil {
 					return err
 				}
-				t.Arr[i] = uint64(nval)
+				item[0] = uint64(nval)
 
+			}
+			t.Arr = append(t.Arr, item[0])
+
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+			if i == 10-1 {
+				return fmt.Errorf("t.Arr: slice too large")
 			}
 
 		}
 	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
 			return err
 		}
-		if end {
+		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
 		}
 	}
+
 	// t.Byts ([]uint8) (slice)
 
-	maj, extra, err = cr.ReadHeader()
-	if err != nil {
-		return err
-	}
-
-	if extra > 9 {
-		return fmt.Errorf("t.Byts: byte array too large (%d)", extra)
-	}
-	if maj != cbg.MajByteString {
-		return fmt.Errorf("expected byte array")
-	}
-
-	if extra > 0 {
-		t.Byts = make([]uint8, extra)
-	}
-
-	if _, err := io.ReadFull(cr, t.Byts); err != nil {
-		return err
-	}
-
 	{
-		end, err := jr.ReadArrayCloseOrComma()
+		bval, err := jr.ReadBytes(9)
 		if err != nil {
 			return err
 		}
-		if end {
+		t.Byts = []uint8(bval)
+	}
+
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return err
+		}
+		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
 		}
 	}
+
 	// t.Str (string) (string)
 
 	{

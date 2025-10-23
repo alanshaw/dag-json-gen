@@ -8,8 +8,7 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/ipfs/go-cid"
-	cbg "github.com/whyrusleeping/cbor-gen"
+	jsg "github.com/alanshaw/dag-json-gen"
 )
 
 func BenchmarkMarshaling(b *testing.B) {
@@ -73,17 +72,8 @@ func BenchmarkLinkScan(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	reader := bytes.NewReader(buf.Bytes())
-
 	b.ReportAllocs()
 	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		reader.Seek(0, io.SeekStart)
-		if err := cbg.ScanForLinks(reader, func(cid.Cid) {}); err != nil {
-			b.Fatal(err)
-		}
-	}
 }
 
 func BenchmarkDeferred(b *testing.B) {
@@ -101,7 +91,7 @@ func BenchmarkDeferred(b *testing.B) {
 	}
 
 	var (
-		deferred cbg.Deferred
+		deferred jsg.Deferred
 		reader   = bytes.NewReader(buf.Bytes())
 	)
 

@@ -3,8 +3,6 @@
 package testing
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -19,30 +17,23 @@ var _ = math.E
 var _ = sort.Sort
 
 func (t *LongString) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
 	if t == nil {
-		_, err := w.Write([]byte("null"))
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte("[")); err != nil {
-		return err
-	}
 	// t.Val (string) (string)
 	if len(t.Val) > 10000 {
 		return fmt.Errorf("Value in field t.Val was too long")
 	}
-
-	{
-		buf, err := json.Marshal(t.Val)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(buf); err != nil {
-			return err
-		}
+	if err := jw.WriteString(string(t.Val)); err != nil {
+		return err
 	}
-
-	if _, err := w.Write([]byte("]")); err != nil {
+	if err := jw.WriteArrayClose(); err != nil {
 		return err
 	}
 	return nil
@@ -60,6 +51,7 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return err
 	}
+
 	// t.Val (string) (string)
 
 	{

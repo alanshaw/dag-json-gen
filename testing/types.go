@@ -111,36 +111,36 @@ type NeedScratchForMap struct {
 }
 
 type RenamedFields struct {
-	Foo int64  `cborgen:"foo"`
-	Bar string `cborgen:"beep"`
+	Foo int64  `dagjsongen:"foo"`
+	Bar string `dagjsongen:"beep"`
 }
 
 type FieldNameOverlap struct {
 	LongerNamedField string
-	Foo              int64  `cborgen:"foo"`
-	Bar              string `cborgen:"beep"`
+	Foo              int64  `dagjsongen:"foo"`
+	Bar              string `dagjsongen:"beep"`
 }
 
 type BigField struct {
-	LargeBytes []byte `cborgen:"maxlen=10000000"`
+	LargeBytes []byte `dagjsongen:"maxlen=10000000"`
 }
 
 type TestEmpty struct {
-	Foo  *string `cborgen:"omitempty"`
-	Beep string  `cborgen:"omitempty"`
+	Foo  *string `dagjsongen:"omitempty"`
+	Beep string  `dagjsongen:"omitempty"`
 	Cat  int64
 }
 
 type TestConstField struct {
-	Cats  string `cborgen:"const=dogsdrool"`
+	Cats  string `dagjsongen:"const=dogsdrool"`
 	Thing int64
 }
 
 type TestCanonicalFieldOrder struct {
-	Foo   int64  `cborgen:"foo"`
-	Bar   string `cborgen:"beep"`
+	Foo   int64  `dagjsongen:"foo"`
+	Bar   string `dagjsongen:"beep"`
 	Drond int64
-	Zp    string `cborgen:"ap"`
+	Zp    string `dagjsongen:"ap"`
 }
 
 type MapStringString struct {
@@ -150,19 +150,19 @@ type MapStringString struct {
 type TestSliceNilPreserve struct {
 	Cat      string
 	Stuff    []uint64
-	Not      []uint64 `cborgen:"preservenil"`
+	Not      []uint64 `dagjsongen:"preservenil"`
 	Other    []byte
-	NotOther []byte `cborgen:"preservenil"`
+	NotOther []byte `dagjsongen:"preservenil"`
 	Beep     int64
 }
 
 type IntAlias int64
 
 type IntArray struct {
-	Ints []int64 `cborgen:"transparent"`
+	Ints []int64 `dagjsongen:"transparent"`
 }
 type IntAliasArray struct {
-	Ints []IntAlias `cborgen:"transparent"`
+	Ints []IntAlias `dagjsongen:"transparent"`
 }
 
 type IntArrayNewType []int64
@@ -214,6 +214,6 @@ type StringPtrSlices struct {
 type TupleWithOptionalFields struct {
 	Int1  int64
 	Uint2 uint64
-	Int3  int64 `cborgen:"optional"`
-	Int4  int64 `cborgen:"optional"`
+	Int3  int64 `dagjsongen:"optional"`
+	Int4  int64 `dagjsongen:"optional"`
 }
