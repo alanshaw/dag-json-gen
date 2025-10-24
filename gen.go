@@ -60,14 +60,6 @@ func (g Gen) maxStringLength() int {
 func (g Gen) doTemplate(w io.Writer, info interface{}, templ string) error {
 	t := template.Must(template.New("").
 		Funcs(template.FuncMap{
-			"MajorType": func(wname string, tname string, val string) string {
-				return fmt.Sprintf(`if err := %s.WriteMajorTypeHeader(%s, uint64(%s)); err != nil {
-	return err
-}`, wname, tname, val)
-			},
-			"ReadHeader": func(rdr string) string {
-				return fmt.Sprintf(`%s.ReadHeader()`, rdr)
-			},
 			"MaxLen": func(val int, defaultType string) string {
 				if val <= 0 {
 					switch defaultType {
@@ -82,9 +74,6 @@ func (g Gen) doTemplate(w io.Writer, info interface{}, templ string) error {
 					}
 				}
 				return fmt.Sprintf("%d", val)
-			},
-			"Deref": func(sp *string) string {
-				return *sp
 			},
 		}).Parse(templ))
 
@@ -206,7 +195,7 @@ func (gti *GenTypeInfo) Imports() []Import {
 	for _, f := range gti.Fields {
 		switch f.Type.Kind() {
 		case reflect.Struct:
-			if !f.Pointer && f.Type != bigIntType {
+			if f.Type == bigIntType {
 				continue
 			}
 			if f.Type == cidType {
@@ -402,7 +391,7 @@ func (g Gen) emitDagJsonMarshalStringField(w io.Writer, f Field) error {
 			}
 		} else {
 			if len(*{{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
-				return fmt.Errorf("Value in field {{ .Name | js }} was too long")
+				return fmt.Errorf("Value in field {{ .Name | js }} was too long: %d", len(*{{ .Name }}))
 			}
 			if err := jw.WriteString(string(*{{ .Name }})); err != nil {
 				return err
@@ -419,7 +408,7 @@ func (g Gen) emitDagJsonMarshalStringField(w io.Writer, f Field) error {
 
 	return g.doTemplate(w, f, `
 	if len({{ .Name }}) > {{ MaxLen .MaxLen "String" }} {
-		return fmt.Errorf("Value in field {{ .Name | js }} was too long")
+		return fmt.Errorf("Value in field {{ .Name | js }} was too long: %d", len({{ .Name }}))
 	}
 	if err := jw.WriteString(string({{ .Name }})); err != nil {
 		return err
@@ -434,7 +423,7 @@ func (g Gen) emitDagJsonMarshalStructField(w io.Writer, f Field) error {
 			return fmt.Errorf("Value in field {{ .Name | js }} was a negative big-integer (not supported)")
 		}
 		if {{ .Name }} == nil {
-			if err := jw.WriteNull(); err != nil {
+			if err := jw.WriteUint8(0); err != nil {
 				return err
 			}
 		} else {
@@ -766,14 +755,12 @@ func (g Gen) emitDagJsonMarshalArrayField(w io.Writer, f Field) error {
 	}
 
 	// array end
-	if _, err := fmt.Fprintf(w, `
-		if err := jw.WriteArrayClose(); err != nil {
-			return err
-		}
-	}`); err != nil {
-		return err
+	_, err = fmt.Fprintf(w, `
 	}
-	return nil
+	if err := jw.WriteArrayClose(); err != nil {
+		return err
+	}`)
+	return err
 }
 
 func (g Gen) emitDagJsonMarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err error) {
@@ -877,7 +864,7 @@ func (g Gen) emitDagJsonUnmarshalStringField(w io.Writer, f Field) error {
 		{
 			sval, err := jr.ReadStringOrNull({{ MaxLen 0 "String" }})
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if sval != nil {
 				{{ .Name }} = (*{{ .TypeName }})(sval)
@@ -891,7 +878,7 @@ func (g Gen) emitDagJsonUnmarshalStringField(w io.Writer, f Field) error {
 	{
 		sval, err := jr.ReadString({{ MaxLen 0 "String" }})
 		if err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 		{{ .Name }} = {{ .TypeName }}(sval)
 	}`)
@@ -904,7 +891,7 @@ func (g Gen) emitDagJsonUnmarshalStructField(w io.Writer, f Field) error {
 		{
 			nval, err := jr.ReadNumberAsBigInt(256)
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			{{ .Name }} = nval
 		}`)
@@ -914,13 +901,13 @@ func (g Gen) emitDagJsonUnmarshalStructField(w io.Writer, f Field) error {
 			{{ if .Pointer }}
 				c, err := jr.ReadCidOrNull()
 				if err != nil {
-					return err
+					return fmt.Errorf("{{ .Name }}: %w", err)
 				}
 				{{ .Name }} = c
 			{{ else }}
 				c, err := jr.ReadCid()
 				if err != nil {
-					return err
+					return fmt.Errorf("{{ .Name }}: %w", err)
 				}
 				{{ .Name }} = c
 			{{ end }}
@@ -943,7 +930,7 @@ func (g Gen) emitDagJsonUnmarshalStructField(w io.Writer, f Field) error {
 				}
 				if null {
 					if err := jr.ReadNull(); err != nil {
-						return err
+						return fmt.Errorf("{{ .Name }}: %w", err)
 					}
 				} else {
 					{{ .Name }} = new({{ .TypeName }})
@@ -966,7 +953,7 @@ func (g Gen) emitDagJsonUnmarshalInt64Field(w io.Writer, f Field) error {
 		{{ if .Pointer }}
 			nval, err := jr.ReadNumberAsInt64OrNull()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if nval != nil {
 				typed := {{ .TypeName }}(*nval)
@@ -975,7 +962,7 @@ func (g Gen) emitDagJsonUnmarshalInt64Field(w io.Writer, f Field) error {
 		{{ else }}
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			{{ .Name }} = {{ .TypeName }}(nval)
 		{{ end }}
@@ -988,7 +975,7 @@ func (g Gen) emitDagJsonUnmarshalUint64Field(w io.Writer, f Field) error {
 		{{ if .Pointer }}
 			nval, err := jr.ReadNumberAsUint64OrNull()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if nval != nil {
 				typed := {{ .TypeName }}(*nval)
@@ -997,7 +984,7 @@ func (g Gen) emitDagJsonUnmarshalUint64Field(w io.Writer, f Field) error {
 		{{ else }}
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			{{ .Name }} = {{ .TypeName }}(nval)
 		{{ end }}
@@ -1009,7 +996,7 @@ func (g Gen) emitDagJsonUnmarshalUint8Field(w io.Writer, f Field) error {
 	{
 		nval, err := jr.ReadNumberAsUint8()
 		if err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 		{{ .Name }} = {{ .TypeName }}(nval)
 	}`)
@@ -1021,7 +1008,7 @@ func (g Gen) emitDagJsonUnmarshalBoolField(w io.Writer, f Field) error {
 		{
 			bval, err := jr.ReadBoolOrNull()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if bval != nil {
 				{{ .Name }} = bval
@@ -1031,7 +1018,7 @@ func (g Gen) emitDagJsonUnmarshalBoolField(w io.Writer, f Field) error {
 		return g.doTemplate(w, f, `
 		bval, err := jr.ReadBool()
 		if err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 		{{ .Name }} = bval`)
 	}
@@ -1040,7 +1027,7 @@ func (g Gen) emitDagJsonUnmarshalBoolField(w io.Writer, f Field) error {
 func (g Gen) emitDagJsonUnmarshalMapField(w io.Writer, f Field) error {
 	err := g.doTemplate(w, f, `
 	if err := jr.ReadObjectOpen(); err != nil {
-		return err
+		return fmt.Errorf("{{ .Name }}: %w", err)
 	}
 
 	{{ .Name }} = {{ .TypeName }}{}
@@ -1116,7 +1103,7 @@ func (g Gen) emitDagJsonUnmarshalMapField(w io.Writer, f Field) error {
 	return g.doTemplate(w, f, `
 		close, err := jr.ReadObjectCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 		if close {
 			break
@@ -1143,7 +1130,7 @@ func (g Gen) emitDagJsonUnmarshalSliceField(w io.Writer, f Field) error {
 		{
 			bval, err := jr.ReadBytesOrNull({{ MaxLen .MaxLen "Bytes" }})
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if bval != nil {
 				{{ .Name }} = {{ .TypeName }}(*bval)
@@ -1153,7 +1140,7 @@ func (g Gen) emitDagJsonUnmarshalSliceField(w io.Writer, f Field) error {
 		{
 			bval, err := jr.ReadBytes({{ MaxLen .MaxLen "Bytes" }})
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			{{ .Name }} = {{ .TypeName }}(bval)
 		}
@@ -1165,20 +1152,30 @@ func (g Gen) emitDagJsonUnmarshalSliceField(w io.Writer, f Field) error {
 		{{ if .PreserveNil }}
 			open, err := jr.ReadArrayOpenOrNull()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if open {
-		{{ end }}
+		{{ else }}
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
-		}`)
+			return fmt.Errorf("{{ .Name }}: %w", err)
+		}
+		{{ end }}
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("{{ .Name }}: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("{{ .Name }}: %w", err)
+			}
+			{{ .Name }} = {{ .TypeName }}{}
+		} else {`)
 	if err != nil {
 		return err
 	}
 
 	err = g.doTemplate(w, f, `
-	{{ .Name }} = {{ .TypeName }}{}
-	item := make({{ .TypeName }}, 0, 1)
+	item := make({{ .TypeName }}, 1)
 	for {{ .IterLabel }} := 0; {{ .IterLabel }} < {{ MaxLen .MaxLen "Array" }}; {{ .IterLabel }}++ {
 `)
 	if err != nil {
@@ -1257,22 +1254,23 @@ func (g Gen) emitDagJsonUnmarshalSliceField(w io.Writer, f Field) error {
 	}
 
 	if err := g.doTemplate(w, f, `
-		{{ .Name }} = append({{ .Name }}, item[0])
+				{{ .Name }} = append({{ .Name }}, item[0])
 
-		close, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
-			return err
-		}
-		if close {
-			break
-		}
-		if {{ .IterLabel }} == {{ MaxLen .MaxLen "Array" }} - 1 {
-			return fmt.Errorf("{{ .Name }}: slice too large")
-		}
-	{{ if .PreserveNil }}
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("{{ .Name }}: %w", err)
+				}
+				if close {
+					break
+				}
+				if {{ .IterLabel }} == {{ MaxLen .MaxLen "Array" }} - 1 {
+					return fmt.Errorf("{{ .Name }}: slice too large")
+				}
 			}
-	{{ end }}
 		}
+		{{ if .PreserveNil }}
+		}
+		{{ end }}
 	}`); err != nil {
 		return err
 	}
@@ -1297,7 +1295,7 @@ func (g Gen) emitDagJsonUnmarshalArrayField(w io.Writer, f Field) error {
 		{
 			bval, err := jr.ReadBytes({{ MaxLen .MaxLen "Bytes" }})
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			{{ .Name }} = {{ .TypeName }}(bval)
 		}`)
@@ -1305,7 +1303,7 @@ func (g Gen) emitDagJsonUnmarshalArrayField(w io.Writer, f Field) error {
 
 	err := g.doTemplate(w, f, `
 	if err := jr.ReadArrayOpen(); err != nil {
-		return nil
+		return fmt.Errorf("{{ .Name }}: %w", err)
 	}
 
 	{{ .Name }} = {{ .TypeName }}{}
@@ -1387,7 +1385,7 @@ func (g Gen) emitDagJsonUnmarshalArrayField(w io.Writer, f Field) error {
 	if err := g.doTemplate(w, f, `
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 		if close {
 			break
@@ -1421,7 +1419,7 @@ func (g Gen) emitDagJsonUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err
 				}
 			}()
 			if err := jr.ReadArrayOpen(); err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}`)
 	}
 	if err != nil {
@@ -1479,12 +1477,15 @@ func (g Gen) emitDagJsonUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err
 		}
 		if !gti.Transparent {
 			if fieldIndex < gti.MandatoryFieldCount-1 {
-				if _, err := fmt.Fprintf(w, `
+				if err := g.doTemplate(w, gti, `
 				{
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return err
-					}
+						return fmt.Errorf("{{ .Name }}: %w", err)
+					}`); err != nil {
+					return err
+				}
+				if _, err := fmt.Fprintf(w, `
 					if close {
 						return fmt.Errorf("json input has too few fields %d < %d")
 					}
@@ -1492,16 +1493,22 @@ func (g Gen) emitDagJsonUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err
 					return err
 				}
 			} else if fieldIndex == len(gti.Fields)-1 {
-				if _, err := fmt.Fprintf(w, `
+				if err := g.doTemplate(w, gti, `
 				if err := jr.ReadArrayClose(); err != nil {
-					return err
+					return fmt.Errorf("{{ .Name }}: %w", err)
 				}`); err != nil {
 					return err
 				}
 			} else {
-				if _, err := fmt.Fprintf(w, `
-				if _, err := jr.ReadArrayCloseOrComma(); err != nil {
-					return err
+				if err := g.doTemplate(w, gti, `
+				{
+					close, err := jr.ReadArrayCloseOrComma()
+					if err != nil {
+						return fmt.Errorf("{{ .Name }}: %w", err)
+					}
+					if close {
+						return nil
+					}
 				}`); err != nil {
 					return err
 				}
@@ -1666,8 +1673,13 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		}
 	}
 
-	fmt.Fprintf(w, "\n\treturn nil\n}\n\n")
-	return nil
+	_, err = fmt.Fprintf(w, `
+			if err := jw.WriteObjectClose(); err != nil {
+				return err
+			}
+		return nil
+	}`)
+	return err
 }
 
 func (g Gen) emitDagJsonUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
@@ -1682,13 +1694,13 @@ func (g Gen) emitDagJsonUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error 
 			}
 		}()
 		if err := jr.ReadObjectOpen(); err != nil {
-			return err
+			return fmt.Errorf("{{ .Name }}: %w", err)
 		}
 
 		for i := uint64(0); i < {{ MaxLen 0 "Array" }}; i++ {
 			name, err := jr.ReadString({{ MaxLen 0 "String" }})
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if err := jr.ReadObjectColon(); err != nil {
 				return err
@@ -1764,7 +1776,7 @@ func (g Gen) emitDagJsonUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error 
 
 			close, err := jr.ReadObjectCloseOrComma()
 			if err != nil {
-				return err
+				return fmt.Errorf("{{ .Name }}: %w", err)
 			}
 			if close {
 				break

@@ -28,7 +28,7 @@ func (t *LongString) MarshalDagJSON(w io.Writer) error {
 
 	// t.Val (string) (string)
 	if len(t.Val) > 10000 {
-		return fmt.Errorf("Value in field t.Val was too long")
+		return fmt.Errorf("Value in field t.Val was too long: %d", len(t.Val))
 	}
 	if err := jw.WriteString(string(t.Val)); err != nil {
 		return err
@@ -49,7 +49,7 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("LongString: %w", err)
 	}
 
 	// t.Val (string) (string)
@@ -57,12 +57,12 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(10000)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Val: %w", err)
 		}
 		t.Val = string(sval)
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("LongString: %w", err)
 	}
 	return nil
 }

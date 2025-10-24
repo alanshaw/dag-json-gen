@@ -10,7 +10,6 @@ import (
 
 	jsg "github.com/alanshaw/dag-json-gen"
 	cid "github.com/ipfs/go-cid"
-	big "math/big"
 )
 
 var _ = cid.Undef
@@ -67,7 +66,7 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("SignedArray: %w", err)
 	}
 
 	// t.Signed ([]uint64) (slice)
@@ -75,38 +74,49 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Signed: %w", err)
 		}
-		t.Signed = []uint64{}
-		item := make([]uint64, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Signed: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Signed: %w", err)
+			}
+			t.Signed = []uint64{}
+		} else {
+			item := make([]uint64, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsUint64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsUint64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = uint64(nval)
+
 				}
-				item[0] = uint64(nval)
+				t.Signed = append(t.Signed, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Signed: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Signed: slice too large")
+				}
 			}
-			t.Signed = append(t.Signed, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Signed: slice too large")
-			}
-
 		}
+
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("SignedArray: %w", err)
 	}
 	return nil
 }
@@ -123,7 +133,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 
 	// t.Foo (string) (string)
 	if len(t.Foo) > 8192 {
-		return fmt.Errorf("Value in field t.Foo was too long")
+		return fmt.Errorf("Value in field t.Foo was too long: %d", len(t.Foo))
 	}
 	if err := jw.WriteString(string(t.Foo)); err != nil {
 		return err
@@ -167,7 +177,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 
 	// t.NString (testing.NamedString) (string)
 	if len(t.NString) > 8192 {
-		return fmt.Errorf("Value in field t.NString was too long")
+		return fmt.Errorf("Value in field t.NString was too long: %d", len(t.NString))
 	}
 	if err := jw.WriteString(string(t.NString)); err != nil {
 		return err
@@ -191,7 +201,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 			}
 		}
 		if len(v) > 8192 {
-			return fmt.Errorf("Value in field v was too long")
+			return fmt.Errorf("Value in field v was too long: %d", len(v))
 		}
 		if err := jw.WriteString(string(v)); err != nil {
 			return err
@@ -217,7 +227,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("SimpleTypeOne: %w", err)
 	}
 
 	// t.Foo (string) (string)
@@ -225,14 +235,14 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(8192)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Foo: %w", err)
 		}
 		t.Foo = string(sval)
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeOne: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 6")
@@ -245,7 +255,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Value: %w", err)
 		}
 		t.Value = uint64(nval)
 
@@ -253,7 +263,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeOne: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 6")
@@ -265,7 +275,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Binary: %w", err)
 		}
 		t.Binary = []uint8(bval)
 	}
@@ -273,7 +283,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeOne: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 3 < 6")
@@ -286,7 +296,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Signed: %w", err)
 		}
 		t.Signed = int64(nval)
 
@@ -294,7 +304,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeOne: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 4 < 6")
@@ -306,14 +316,14 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(8192)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.NString: %w", err)
 		}
 		t.NString = NamedString(sval)
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeOne: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 5 < 6")
@@ -325,36 +335,47 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Strings: %w", err)
 		}
-		t.Strings = []string{}
-		item := make([]string, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
-				sval, err := jr.ReadString(8192)
-				if err != nil {
-					return err
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Strings: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Strings: %w", err)
+			}
+			t.Strings = []string{}
+		} else {
+			item := make([]string, 1)
+			for i := 0; i < 8192; i++ {
+
+				{
+					sval, err := jr.ReadString(8192)
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = string(sval)
 				}
-				item[0] = string(sval)
-			}
-			t.Strings = append(t.Strings, item[0])
+				t.Strings = append(t.Strings, item[0])
 
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Strings: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Strings: slice too large")
+				}
 			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Strings: slice too large")
-			}
-
 		}
+
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("SimpleTypeOne: %w", err)
 	}
 	return nil
 }
@@ -466,7 +487,7 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 
 	// t.Dog (string) (string)
 	if len(t.Dog) > 8192 {
-		return fmt.Errorf("Value in field t.Dog was too long")
+		return fmt.Errorf("Value in field t.Dog was too long: %d", len(t.Dog))
 	}
 	if err := jw.WriteString(string(t.Dog)); err != nil {
 		return err
@@ -551,9 +572,9 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 		if err := v.MarshalDagJSON(jw); err != nil {
 			return err
 		}
-		if err := jw.WriteArrayClose(); err != nil {
-			return err
-		}
+	}
+	if err := jw.WriteArrayClose(); err != nil {
+		return err
 	}
 	if err := jw.WriteArrayClose(); err != nil {
 		return err
@@ -571,7 +592,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("SimpleTypeTwo: %w", err)
 	}
 
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
@@ -583,7 +604,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 		if null {
 			if err := jr.ReadNull(); err != nil {
-				return err
+				return fmt.Errorf("t.Stuff: %w", err)
 			}
 		} else {
 			t.Stuff = new(SimpleTypeTwo)
@@ -596,7 +617,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 9")
@@ -608,40 +629,51 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Others: %w", err)
 		}
-		t.Others = []uint64{}
-		item := make([]uint64, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Others: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Others: %w", err)
+			}
+			t.Others = []uint64{}
+		} else {
+			item := make([]uint64, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsUint64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsUint64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = uint64(nval)
+
 				}
-				item[0] = uint64(nval)
+				t.Others = append(t.Others, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Others: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Others: slice too large")
+				}
 			}
-			t.Others = append(t.Others, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Others: slice too large")
-			}
-
 		}
+
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 9")
@@ -653,40 +685,51 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.SignedOthers: %w", err)
 		}
-		t.SignedOthers = []int64{}
-		item := make([]int64, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.SignedOthers: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.SignedOthers: %w", err)
+			}
+			t.SignedOthers = []int64{}
+		} else {
+			item := make([]int64, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsInt64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsInt64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = int64(nval)
+
 				}
-				item[0] = int64(nval)
+				t.SignedOthers = append(t.SignedOthers, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.SignedOthers: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.SignedOthers: slice too large")
+				}
 			}
-			t.SignedOthers = append(t.SignedOthers, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.SignedOthers: slice too large")
-			}
-
 		}
+
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 3 < 9")
@@ -698,39 +741,50 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Test: %w", err)
 		}
-		t.Test = [][]uint8{}
-		item := make([][]uint8, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
-				bval, err := jr.ReadBytes(2097152)
-				if err != nil {
-					return err
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Test: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Test: %w", err)
+			}
+			t.Test = [][]uint8{}
+		} else {
+			item := make([][]uint8, 1)
+			for i := 0; i < 8192; i++ {
+
+				{
+					bval, err := jr.ReadBytes(2097152)
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = []uint8(bval)
 				}
-				item[0] = []uint8(bval)
-			}
 
-			t.Test = append(t.Test, item[0])
+				t.Test = append(t.Test, item[0])
 
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Test: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Test: slice too large")
+				}
 			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Test: slice too large")
-			}
-
 		}
+
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 4 < 9")
@@ -742,14 +796,14 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(8192)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Dog: %w", err)
 		}
 		t.Dog = string(sval)
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 5 < 9")
@@ -761,40 +815,51 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Numbers: %w", err)
 		}
-		t.Numbers = []NamedNumber{}
-		item := make([]NamedNumber, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Numbers: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Numbers: %w", err)
+			}
+			t.Numbers = []NamedNumber{}
+		} else {
+			item := make([]NamedNumber, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsUint64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsUint64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = NamedNumber(nval)
+
 				}
-				item[0] = NamedNumber(nval)
+				t.Numbers = append(t.Numbers, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Numbers: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Numbers: slice too large")
+				}
 			}
-			t.Numbers = append(t.Numbers, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Numbers: slice too large")
-			}
-
 		}
+
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 6 < 9")
@@ -807,7 +872,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Pizza: %w", err)
 		}
 		if nval != nil {
 			typed := uint64(*nval)
@@ -818,7 +883,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 7 < 9")
@@ -831,7 +896,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.PointyPizza: %w", err)
 		}
 		if nval != nil {
 			typed := NamedNumber(*nval)
@@ -842,7 +907,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("SimpleTypeTwo: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 8 < 9")
@@ -852,7 +917,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
 	if err := jr.ReadArrayOpen(); err != nil {
-		return nil
+		return fmt.Errorf("t.Arrrrrghay: %w", err)
 	}
 
 	t.Arrrrrghay = [3]SimpleTypeOne{}
@@ -864,7 +929,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Arrrrrghay: %w", err)
 		}
 		if close {
 			break
@@ -874,7 +939,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("SimpleTypeTwo: %w", err)
 	}
 	return nil
 }
@@ -927,7 +992,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("DeferredContainer: %w", err)
 	}
 
 	// t.Stuff (testing.SimpleTypeOne) (struct)
@@ -939,7 +1004,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 		if null {
 			if err := jr.ReadNull(); err != nil {
-				return err
+				return fmt.Errorf("t.Stuff: %w", err)
 			}
 		} else {
 			t.Stuff = new(SimpleTypeOne)
@@ -952,7 +1017,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("DeferredContainer: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
@@ -969,7 +1034,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("DeferredContainer: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
@@ -982,13 +1047,13 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Value: %w", err)
 		}
 		t.Value = uint64(nval)
 
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("DeferredContainer: %w", err)
 	}
 	return nil
 }
@@ -1043,9 +1108,9 @@ func (t *FixedArrays) MarshalDagJSON(w io.Writer) error {
 			return err
 		}
 
-		if err := jw.WriteArrayClose(); err != nil {
-			return err
-		}
+	}
+	if err := jw.WriteArrayClose(); err != nil {
+		return err
 	}
 	if err := jw.WriteArrayClose(); err != nil {
 		return err
@@ -1063,7 +1128,7 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("FixedArrays: %w", err)
 	}
 
 	// t.Bytes ([20]uint8) (array)
@@ -1071,14 +1136,14 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Bytes: %w", err)
 		}
 		t.Bytes = [20]uint8(bval)
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("FixedArrays: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1090,14 +1155,14 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		bval, err := jr.ReadBytes(2097152)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Uint8: %w", err)
 		}
 		t.Uint8 = [20]uint8(bval)
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("FixedArrays: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1107,7 +1172,7 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 	// t.Uint64 ([20]uint64) (array)
 
 	if err := jr.ReadArrayOpen(); err != nil {
-		return nil
+		return fmt.Errorf("t.Uint64: %w", err)
 	}
 
 	t.Uint64 = [20]uint64{}
@@ -1116,14 +1181,14 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return err
+				return fmt.Errorf("t.Uint64[i]: %w", err)
 			}
 			t.Uint64[i] = uint64(nval)
 
 		}
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Uint64: %w", err)
 		}
 		if close {
 			break
@@ -1133,7 +1198,7 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("FixedArrays: %w", err)
 	}
 	return nil
 }
@@ -1168,7 +1233,7 @@ func (t *ThingWithSomeTime) MarshalDagJSON(w io.Writer) error {
 
 	// t.CatName (string) (string)
 	if len(t.CatName) > 8192 {
-		return fmt.Errorf("Value in field t.CatName was too long")
+		return fmt.Errorf("Value in field t.CatName was too long: %d", len(t.CatName))
 	}
 	if err := jw.WriteString(string(t.CatName)); err != nil {
 		return err
@@ -1189,7 +1254,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("ThingWithSomeTime: %w", err)
 	}
 
 	// t.When (typegen.DagJsonTime) (struct)
@@ -1201,7 +1266,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("ThingWithSomeTime: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1214,7 +1279,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Stuff: %w", err)
 		}
 		t.Stuff = int64(nval)
 
@@ -1222,7 +1287,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("ThingWithSomeTime: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1234,12 +1299,12 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(8192)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.CatName: %w", err)
 		}
 		t.CatName = string(sval)
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("ThingWithSomeTime: %w", err)
 	}
 	return nil
 }
@@ -1279,7 +1344,7 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("BigField: %w", err)
 	}
 
 	// t.LargeBytes ([]uint8) (slice)
@@ -1287,13 +1352,13 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		bval, err := jr.ReadBytes(10000000)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.LargeBytes: %w", err)
 		}
 		t.LargeBytes = []uint8(bval)
 	}
 
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("BigField: %w", err)
 	}
 	return nil
 }
@@ -1338,35 +1403,46 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Ints: %w", err)
 		}
-		t.Ints = []int64{}
-		item := make([]int64, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Ints: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Ints: %w", err)
+			}
+			t.Ints = []int64{}
+		} else {
+			item := make([]int64, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsInt64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsInt64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = int64(nval)
+
 				}
-				item[0] = int64(nval)
+				t.Ints = append(t.Ints, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Ints: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Ints: slice too large")
+				}
 			}
-			t.Ints = append(t.Ints, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Ints: slice too large")
-			}
-
 		}
+
 	}
 	return nil
 }
@@ -1411,35 +1487,46 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Ints: %w", err)
 		}
-		t.Ints = []IntAlias{}
-		item := make([]IntAlias, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Ints: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Ints: %w", err)
+			}
+			t.Ints = []IntAlias{}
+		} else {
+			item := make([]IntAlias, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsInt64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsInt64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = IntAlias(nval)
+
 				}
-				item[0] = IntAlias(nval)
+				t.Ints = append(t.Ints, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Ints: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("t.Ints: slice too large")
+				}
 			}
-			t.Ints = append(t.Ints, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("t.Ints: slice too large")
-			}
-
 		}
+
 	}
 	return nil
 }
@@ -1496,7 +1583,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("TupleIntArray: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
@@ -1505,7 +1592,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int1: %w", err)
 		}
 		t.Int1 = int64(nval)
 
@@ -1513,7 +1600,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleIntArray: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1526,7 +1613,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int2: %w", err)
 		}
 		t.Int2 = int64(nval)
 
@@ -1534,7 +1621,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleIntArray: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1547,13 +1634,13 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int3: %w", err)
 		}
 		t.Int3 = int64(nval)
 
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("TupleIntArray: %w", err)
 	}
 	return nil
 }
@@ -1632,7 +1719,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
@@ -1641,7 +1728,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64OrNull()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int1: %w", err)
 		}
 		if nval != nil {
 			typed := int64(*nval)
@@ -1652,7 +1739,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleIntArrayOptionals: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 4")
@@ -1665,7 +1752,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int2: %w", err)
 		}
 		t.Int2 = int64(nval)
 
@@ -1673,7 +1760,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleIntArrayOptionals: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 4")
@@ -1686,7 +1773,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int3: %w", err)
 		}
 		t.Int3 = uint64(nval)
 
@@ -1694,7 +1781,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleIntArrayOptionals: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 3 < 4")
@@ -1707,7 +1794,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64OrNull()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int4: %w", err)
 		}
 		if nval != nil {
 			typed := uint64(*nval)
@@ -1716,7 +1803,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
 	}
 	return nil
 }
@@ -1761,35 +1848,46 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("(*t): %w", err)
 		}
-		(*t) = []int64{}
-		item := make([]int64, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("(*t): %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("(*t): %w", err)
+			}
+			(*t) = []int64{}
+		} else {
+			item := make([]int64, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsInt64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsInt64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = int64(nval)
+
 				}
-				item[0] = int64(nval)
+				(*t) = append((*t), item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("(*t): %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("(*t): slice too large")
+				}
 			}
-			(*t) = append((*t), item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("(*t): slice too large")
-			}
-
 		}
+
 	}
 	return nil
 }
@@ -1834,35 +1932,46 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("(*t): %w", err)
 		}
-		(*t) = []IntAlias{}
-		item := make([]IntAlias, 0, 1)
-		for i := 0; i < 8192; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("(*t): %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("(*t): %w", err)
+			}
+			(*t) = []IntAlias{}
+		} else {
+			item := make([]IntAlias, 1)
+			for i := 0; i < 8192; i++ {
 
-				nval, err := jr.ReadNumberAsInt64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsInt64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = IntAlias(nval)
+
 				}
-				item[0] = IntAlias(nval)
+				(*t) = append((*t), item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("(*t): %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 8192-1 {
+					return fmt.Errorf("(*t): slice too large")
+				}
 			}
-			(*t) = append((*t), item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 8192-1 {
-				return fmt.Errorf("(*t): slice too large")
-			}
-
 		}
+
 	}
 	return nil
 }
@@ -1893,7 +2002,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 			}
 			v := (*t)[k]
 			if len(k) > 8192 {
-				return fmt.Errorf("Value in field k was too long")
+				return fmt.Errorf("Value in field k was too long: %d", len(k))
 			}
 			if err := jw.WriteString(string(k)); err != nil {
 				return err
@@ -1903,7 +2012,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 			}
 
 			if len(v) > 8192 {
-				return fmt.Errorf("Value in field v was too long")
+				return fmt.Errorf("Value in field v was too long: %d", len(v))
 			}
 			if err := jw.WriteString(string(v)); err != nil {
 				return err
@@ -1925,7 +2034,7 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 	// (*t) (testing.MapTransparentType) (map)
 
 	if err := jr.ReadObjectOpen(); err != nil {
-		return err
+		return fmt.Errorf("(*t): %w", err)
 	}
 
 	(*t) = map[string]string{}
@@ -1935,7 +2044,7 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
-				return err
+				return fmt.Errorf("k: %w", err)
 			}
 			k = string(sval)
 		}
@@ -1946,14 +2055,14 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
-				return err
+				return fmt.Errorf("v: %w", err)
 			}
 			v = string(sval)
 		}
 		(*t)[k] = v
 		close, err := jr.ReadObjectCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("(*t): %w", err)
 		}
 		if close {
 			break
@@ -1978,7 +2087,7 @@ func (t *BigIntContainer) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("Value in field t.Int was a negative big-integer (not supported)")
 	}
 	if t.Int == nil {
-		if err := jw.WriteNull(); err != nil {
+		if err := jw.WriteUint8(0); err != nil {
 			return err
 		}
 	} else {
@@ -2002,7 +2111,7 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("BigIntContainer: %w", err)
 	}
 
 	// t.Int (big.Int) (struct)
@@ -2010,12 +2119,12 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		nval, err := jr.ReadNumberAsBigInt(256)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int: %w", err)
 		}
 		t.Int = nval
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("BigIntContainer: %w", err)
 	}
 	return nil
 }
@@ -2082,7 +2191,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("TupleWithOptionalFields: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
@@ -2091,7 +2200,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int1: %w", err)
 		}
 		t.Int1 = int64(nval)
 
@@ -2099,7 +2208,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("TupleWithOptionalFields: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 2")
@@ -2112,13 +2221,19 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsUint64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Uint2: %w", err)
 		}
 		t.Uint2 = uint64(nval)
 
 	}
-	if _, err := jr.ReadArrayCloseOrComma(); err != nil {
-		return err
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		}
+		if close {
+			return nil
+		}
 	}
 
 	// t.Int3 (int64) (int64)
@@ -2127,13 +2242,19 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int3: %w", err)
 		}
 		t.Int3 = int64(nval)
 
 	}
-	if _, err := jr.ReadArrayCloseOrComma(); err != nil {
-		return err
+	{
+		close, err := jr.ReadArrayCloseOrComma()
+		if err != nil {
+			return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		}
+		if close {
+			return nil
+		}
 	}
 
 	// t.Int4 (int64) (int64)
@@ -2142,13 +2263,13 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		nval, err := jr.ReadNumberAsInt64()
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Int4: %w", err)
 		}
 		t.Int4 = int64(nval)
 
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("TupleWithOptionalFields: %w", err)
 	}
 	return nil
 }

@@ -69,7 +69,7 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 
 	// t.Str (string) (string)
 	if len(t.Str) > 8 {
-		return fmt.Errorf("Value in field t.Str was too long")
+		return fmt.Errorf("Value in field t.Str was too long: %d", len(t.Str))
 	}
 	if err := jw.WriteString(string(t.Str)); err != nil {
 		return err
@@ -90,7 +90,7 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("LimitedStruct: %w", err)
 	}
 
 	// t.Arr ([]uint64) (slice)
@@ -98,40 +98,51 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return err
+			return fmt.Errorf("t.Arr: %w", err)
 		}
-		t.Arr = []uint64{}
-		item := make([]uint64, 0, 1)
-		for i := 0; i < 10; i++ {
 
-			{
+		close, err := jr.PeekArrayClose()
+		if err != nil {
+			return fmt.Errorf("t.Arr: %w", err)
+		}
+		if close {
+			if err := jr.ReadArrayClose(); err != nil {
+				return fmt.Errorf("t.Arr: %w", err)
+			}
+			t.Arr = []uint64{}
+		} else {
+			item := make([]uint64, 1)
+			for i := 0; i < 10; i++ {
 
-				nval, err := jr.ReadNumberAsUint64()
-				if err != nil {
-					return err
+				{
+
+					nval, err := jr.ReadNumberAsUint64()
+					if err != nil {
+						return fmt.Errorf("item[0]: %w", err)
+					}
+					item[0] = uint64(nval)
+
 				}
-				item[0] = uint64(nval)
+				t.Arr = append(t.Arr, item[0])
 
+				close, err := jr.ReadArrayCloseOrComma()
+				if err != nil {
+					return fmt.Errorf("t.Arr: %w", err)
+				}
+				if close {
+					break
+				}
+				if i == 10-1 {
+					return fmt.Errorf("t.Arr: slice too large")
+				}
 			}
-			t.Arr = append(t.Arr, item[0])
-
-			close, err := jr.ReadArrayCloseOrComma()
-			if err != nil {
-				return err
-			}
-			if close {
-				break
-			}
-			if i == 10-1 {
-				return fmt.Errorf("t.Arr: slice too large")
-			}
-
 		}
+
 	}
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("LimitedStruct: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 1 < 3")
@@ -143,7 +154,7 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		bval, err := jr.ReadBytes(9)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Byts: %w", err)
 		}
 		t.Byts = []uint8(bval)
 	}
@@ -151,7 +162,7 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		close, err := jr.ReadArrayCloseOrComma()
 		if err != nil {
-			return err
+			return fmt.Errorf("LimitedStruct: %w", err)
 		}
 		if close {
 			return fmt.Errorf("json input has too few fields 2 < 3")
@@ -163,12 +174,12 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 		sval, err := jr.ReadString(8)
 		if err != nil {
-			return err
+			return fmt.Errorf("t.Str: %w", err)
 		}
 		t.Str = string(sval)
 	}
 	if err := jr.ReadArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("LimitedStruct: %w", err)
 	}
 	return nil
 }

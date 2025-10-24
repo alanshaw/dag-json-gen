@@ -196,9 +196,12 @@ type LongString struct {
 
 func (ls LongString) Generate(rand *rand.Rand, size int) reflect.Value {
 	ols := new(LongString)
-	s := make([]byte, 9999)
-	rand.Read(s)
-	ols.Val = string(s)
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, 9999)
+	for i := range result {
+		result[i] = charset[rand.Intn(len(charset))]
+	}
+	ols.Val = string(result)
 	return reflect.ValueOf(ols).Elem()
 }
 

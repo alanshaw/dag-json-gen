@@ -52,7 +52,7 @@ func (d *DagJsonWriter) WriteBool(b bool) error {
 }
 
 func (d *DagJsonWriter) WriteBytes(b []byte) error {
-	_, err := fmt.Fprintf(d.w, `{"bytes":"%s"}`, base64.RawStdEncoding.EncodeToString(b))
+	_, err := fmt.Fprintf(d.w, `{"/":{"bytes":"%s"}}`, base64.RawStdEncoding.EncodeToString(b))
 	return err
 }
 
@@ -94,7 +94,7 @@ func (d *DagJsonWriter) WriteObjectOpen() error {
 func (d *DagJsonWriter) WriteString(s string) error {
 	buf, err := json.Marshal(s)
 	if err != nil {
-		return err
+		return fmt.Errorf("writing JSON string: %w", err)
 	}
 	_, err = d.w.Write(buf)
 	return err
@@ -197,7 +197,7 @@ func (d *DagJsonReader) ReadBoolOrNull() (*bool, error) {
 func (d *DagJsonReader) ReadBytes(maxLength int64) ([]byte, error) {
 	b, err := d.ReadBytesOrNull(maxLength)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	if b == nil {
 		return nil, errors.New("expected bytes but read null")
@@ -215,9 +215,6 @@ func (d *DagJsonReader) ReadBytesOrNull(maxLength int64) (*[]byte, error) {
 	}
 	if tok != jsontokenizer.TokObjectOpen {
 		return nil, fmt.Errorf("expected object open but read %s", tokenName(tok))
-	}
-	if err := d.ReadObjectOpen(); err != nil {
-		return nil, err
 	}
 	slash, err := d.ReadString(1)
 	if err != nil {
@@ -435,11 +432,18 @@ func (d *DagJsonReader) ReadStringOrNull(maxLength int64) (*string, error) {
 	if tok != jsontokenizer.TokString {
 		return nil, fmt.Errorf("expected string but read %s", tokenName(tok))
 	}
+
 	var buf bytes.Buffer
+	buf.Write([]byte(`"`))
 	if _, err := d.tk.ReadString(LimitWriter(&buf, maxLength)); err != nil {
 		return nil, err
 	}
-	s := buf.String()
+	buf.Write([]byte(`"`))
+	var s string
+	err = json.Unmarshal(buf.Bytes(), &s)
+	if err != nil {
+		return nil, fmt.Errorf("reading JSON string: %w", err)
+	}
 	return &s, nil
 }
 
@@ -517,6 +521,19 @@ func (d *DagJsonReader) ReadArrayOpenOrNull() (bool, error) {
 	return true, nil
 }
 
+// PeekArrayClose returns true if the next token is "]".
+func (d *DagJsonReader) PeekArrayClose() (bool, error) {
+	if d.peek > -1 {
+		return false, errors.New("reader is already peeked")
+	}
+	tok, err := d.token()
+	if err != nil {
+		return false, err
+	}
+	d.peek = tok
+	return tok == jsontokenizer.TokArrayClose, nil
+}
+
 func (d *DagJsonReader) ReadArrayClose() error {
 	tok, err := d.token()
 	if err != nil {
@@ -550,14 +567,24 @@ func tokenName(tok jsontokenizer.TokType) string {
 		return "null"
 	case jsontokenizer.TokTrue, jsontokenizer.TokFalse:
 		return "boolean"
-	case jsontokenizer.TokArrayOpen, jsontokenizer.TokArrayClose, jsontokenizer.TokObjectOpen, jsontokenizer.TokObjectClose, jsontokenizer.TokObjectColon, jsontokenizer.TokComma:
-		return "delimiter"
+	case jsontokenizer.TokArrayOpen:
+		return "["
+	case jsontokenizer.TokArrayClose:
+		return "]"
+	case jsontokenizer.TokObjectOpen:
+		return "{"
+	case jsontokenizer.TokObjectClose:
+		return "}"
+	case jsontokenizer.TokObjectColon:
+		return ":"
+	case jsontokenizer.TokComma:
+		return ","
 	case jsontokenizer.TokNumber:
 		return "number"
 	case jsontokenizer.TokString:
 		return "string"
 	default:
-		return "unknown"
+		panic(fmt.Errorf("unknown token: %d", tok))
 	}
 }
 
@@ -576,7 +603,7 @@ type LimitedWriter struct {
 }
 
 func (l *LimitedWriter) Write(p []byte) (n int, err error) {
-	if l.N <= 0 {
+	if l.N < 0 {
 		return 0, io.EOF
 	}
 	if int64(len(p)) > l.N {

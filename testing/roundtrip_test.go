@@ -113,7 +113,7 @@ func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJson
 
 	buf := new(bytes.Buffer)
 	if err := obj.MarshalDagJSON(buf); err != nil {
-		t.Fatal("i guess its fine to fail marshaling")
+		t.Fatal("i guess its fine to fail marshaling", err)
 	}
 
 	enc := buf.Bytes()
@@ -125,7 +125,7 @@ func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJson
 	}
 
 	if err := nobj.UnmarshalDagJSON(bytes.NewReader(enc)); err != nil {
-		t.Logf("got bad bytes: %x", enc)
+		t.Logf("got bad bytes: %s", string(enc))
 		t.Fatal("failed to round trip object: ", err)
 	}
 
@@ -142,7 +142,7 @@ func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJson
 	if !bytes.Equal(nbuf.Bytes(), enc) {
 		fmt.Printf("%#v\n", obj)
 		fmt.Printf("%#v\n", nobj)
-		t.Fatalf("objects encodings different: %x != %x", nbuf.Bytes(), enc)
+		t.Fatalf("objects encodings different: %s != %s", nbuf.String(), string(enc))
 	}
 }
 

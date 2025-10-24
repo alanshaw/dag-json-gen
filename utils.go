@@ -31,9 +31,6 @@ func ReadCid(r io.Reader) (cid.Cid, error) {
 	if slash != "/" {
 		return cid.Undef, fmt.Errorf("expected / but read %s", slash)
 	}
-	if err := jr.ReadObjectColon(); err != nil {
-		return cid.Undef, err
-	}
 	s, err := jr.ReadString(59)
 	if err != nil {
 		return cid.Undef, err
