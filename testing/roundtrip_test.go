@@ -141,9 +141,9 @@ func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJson
 	}
 
 	if !bytes.Equal(nbuf.Bytes(), enc) {
-		fmt.Printf("%#v\n", obj)
-		fmt.Printf("%#v\n", nobj)
-		t.Fatalf("objects encodings different: %s != %s", nbuf.String(), string(enc))
+		t.Log(buf.String())
+		t.Log(nbuf.String())
+		t.Fatalf("objects encodings different")
 	}
 }
 
@@ -630,8 +630,8 @@ func TestMapTransparentType(t *testing.T) {
 
 func TestConfigurability(t *testing.T) {
 	t.Run("MaxArrayLength", func(t *testing.T) {
-		good := "[1,2,3,4,5,6,7,8,9,0]"
-		bad := "[1,2,3,4,5,6,7,8,9,0,0]"
+		good := `[[1,2,3,4,5,6,7,8,9,0],{"/":{"bytes":""}},""]`
+		bad := `[[1,2,3,4,5,6,7,8,9,0,0],{"/":{"bytes":""}},""]`
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Arr: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}
@@ -662,20 +662,20 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "t.Arr: array too large (11)" {
+			} else if err.Error() != "t.Arr: slice too large" {
 				t.Fatal("unexpected error", err)
 			}
 		})
 	})
 
 	t.Run("MaxByteLength", func(t *testing.T) {
-		good := `{"/":{"bytes","mmmmmmmmm"}}`
-		bad := `{"/":{"bytes","mmmmmmmmmm"}}`
+		good := `[[],{"/":{"bytes":"MTIzNDU2Nzg5"}},""]`
+		bad := `[[],{"/":{"bytes":"MTIzNDU2Nzg5MA"}},""]`
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Byts: []byte("123456789")}
 			recepticle := &LimitedStruct{}
-			testValueRoundtrip(t, &ls, recepticle, WithGolden(`{"/":{"bytes","kslklsklksl"}}`))
+			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
 
 			ls.Byts = []byte("1234567890")
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
@@ -701,15 +701,15 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "t.Byts: byte array too large (10)" {
+			} else if err.Error() != "t.Byts: byte array too large" {
 				t.Fatal("unexpected error", err)
 			}
 		})
 	})
 
 	t.Run("MaxStringLength", func(t *testing.T) {
-		good := "12345678"
-		bad := "123456789"
+		good := `[[],{"/":{"bytes":""}},"12345678"]`
+		bad := `[[],{"/":{"bytes":""}},"123456789"]`
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Str: "12345678"}
@@ -720,7 +720,7 @@ func TestConfigurability(t *testing.T) {
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "Value in field t.Str was too long" {
+			} else if err.Error() != "String in field t.Str was too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -740,7 +740,7 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "string in input was too long" {
+			} else if err.Error() != "t.Str: string too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})

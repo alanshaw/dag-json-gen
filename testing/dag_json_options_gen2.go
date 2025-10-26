@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -15,6 +16,7 @@ import (
 var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
+var _ = errors.Is
 
 func (t *LongString) MarshalDagJSON(w io.Writer) error {
 	jw := jsg.NewDagJsonWriter(w)
@@ -28,7 +30,7 @@ func (t *LongString) MarshalDagJSON(w io.Writer) error {
 
 	// t.Val (string) (string)
 	if len(t.Val) > 10000 {
-		return fmt.Errorf("Value in field t.Val was too long: %d", len(t.Val))
+		return fmt.Errorf("String in field t.Val was too long")
 	}
 	if err := jw.WriteString(string(t.Val)); err != nil {
 		return fmt.Errorf("t.Val: %w", err)
@@ -66,6 +68,9 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(10000)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Val: string too long")
+				}
 				return fmt.Errorf("t.Val: %w", err)
 			}
 			t.Val = string(sval)

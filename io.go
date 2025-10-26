@@ -317,7 +317,7 @@ func (d *DagJsonReader) ReadBoolOrNull() (*bool, error) {
 	}
 }
 
-func (d *DagJsonReader) ReadBytes(maxLength int64) ([]byte, error) {
+func (d *DagJsonReader) ReadBytes(maxLength int) ([]byte, error) {
 	b, err := d.ReadBytesOrNull(maxLength)
 	if err != nil {
 		return nil, err
@@ -328,7 +328,7 @@ func (d *DagJsonReader) ReadBytes(maxLength int64) ([]byte, error) {
 	return *b, nil
 }
 
-func (d *DagJsonReader) ReadBytesOrNull(maxLength int64) (*[]byte, error) {
+func (d *DagJsonReader) ReadBytesOrNull(maxLength int) (*[]byte, error) {
 	tok, err := d.token()
 	if err != nil {
 		return nil, err
@@ -357,12 +357,12 @@ func (d *DagJsonReader) ReadBytesOrNull(maxLength int64) (*[]byte, error) {
 		return nil, err
 	}
 	if bytesKey != "bytes" {
-		return nil, fmt.Errorf("expected \"bytes\" but read %s", slash)
+		return nil, fmt.Errorf("expected \"bytes\" but read %s", bytesKey)
 	}
 	if err := d.ReadObjectColon(); err != nil {
 		return nil, err
 	}
-	s, err := d.ReadString(maxLength)
+	s, err := d.ReadString(base64.RawStdEncoding.EncodedLen(maxLength))
 	if err != nil {
 		return nil, err
 	}
@@ -429,7 +429,7 @@ func (d *DagJsonReader) ReadCidOrNull() (*cid.Cid, error) {
 	return &parsed, nil
 }
 
-func (d *DagJsonReader) ReadNumberAsString(maxLength int64) (string, error) {
+func (d *DagJsonReader) ReadNumberAsString(maxLength int) (string, error) {
 	tok, err := d.token()
 	if err != nil {
 		return "", err
@@ -438,7 +438,7 @@ func (d *DagJsonReader) ReadNumberAsString(maxLength int64) (string, error) {
 		return "", fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(LimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, maxLength)); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
@@ -453,7 +453,7 @@ func (d *DagJsonReader) ReadNumberAsUint8() (uint8, error) {
 		return 0, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(LimitWriter(&buf, 3)); err != nil {
+	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 3)); err != nil {
 		return 0, err
 	}
 	n, err := strconv.ParseUint(buf.String(), 10, 8)
@@ -486,7 +486,7 @@ func (d *DagJsonReader) ReadNumberAsInt64OrNull() (*int64, error) {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(LimitWriter(&buf, 20)); err != nil {
+	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 20)); err != nil {
 		return nil, err
 	}
 	n, err := strconv.ParseInt(buf.String(), 10, 64)
@@ -519,7 +519,7 @@ func (d *DagJsonReader) ReadNumberAsUint64OrNull() (*uint64, error) {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(LimitWriter(&buf, 20)); err != nil {
+	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 20)); err != nil {
 		return nil, err
 	}
 	n, err := strconv.ParseUint(buf.String(), 10, 64)
@@ -529,7 +529,7 @@ func (d *DagJsonReader) ReadNumberAsUint64OrNull() (*uint64, error) {
 	return &n, nil
 }
 
-func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int64) (*big.Int, error) {
+func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int) (*big.Int, error) {
 	tok, err := d.token()
 	if err != nil {
 		return nil, err
@@ -538,7 +538,7 @@ func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int64) (*big.Int, error) {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
 	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(LimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, maxLength)); err != nil {
 		return nil, err
 	}
 	n, ok := big.NewInt(0).SetString(buf.String(), 10)
@@ -548,7 +548,7 @@ func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int64) (*big.Int, error) {
 	return n, nil
 }
 
-func (d *DagJsonReader) ReadString(maxLength int64) (string, error) {
+func (d *DagJsonReader) ReadString(maxLength int) (string, error) {
 	value, err := d.ReadStringOrNull(maxLength)
 	if err != nil {
 		return "", err
@@ -559,7 +559,7 @@ func (d *DagJsonReader) ReadString(maxLength int64) (string, error) {
 	return *value, nil
 }
 
-func (d *DagJsonReader) ReadStringOrNull(maxLength int64) (*string, error) {
+func (d *DagJsonReader) ReadStringOrNull(maxLength int) (*string, error) {
 	tok, err := d.token()
 	if err != nil {
 		return nil, err
@@ -573,7 +573,7 @@ func (d *DagJsonReader) ReadStringOrNull(maxLength int64) (*string, error) {
 
 	var buf bytes.Buffer
 	buf.Write([]byte(`"`))
-	if _, err := d.tk.ReadString(LimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadString(NewLimitWriter(&buf, maxLength)); err != nil {
 		return nil, err
 	}
 	buf.Write([]byte(`"`))
@@ -731,28 +731,25 @@ func tokenName(tok jsontokenizer.TokType) string {
 	}
 }
 
-// LimitWriter returns a Writer that writes to w
-// but stops with EOF after n bytes.
-// The underlying implementation is a *LimitedWriter.
-func LimitWriter(w io.Writer, n int64) io.Writer { return &LimitedWriter{w, n} }
+var ErrLimitExceeded = errors.New("limit exceeded")
 
-// A LimitedWriter writes to W but limits the amount of
-// data returned to just N bytes. Each call to Write
-// updates N to reflect the new amount remaining.
-// Read returns EOF when N <= 0 or when the underlying W returns EOF.
+func NewLimitWriter(w io.Writer, n int) io.Writer {
+	return &LimitedWriter{w, n}
+}
+
+// A LimitedWriter allows up to N bytes of data to be written to W. If a
+// written chunk would cause the limit to be exceeded, [ErrLimitExceeded] is
+// returned and the written chunk is not written to W.
 type LimitedWriter struct {
 	W io.Writer // underlying writer
-	N int64     // max bytes remaining
+	N int       // max bytes remaining
 }
 
 func (l *LimitedWriter) Write(p []byte) (n int, err error) {
-	if l.N < 0 {
-		return 0, io.EOF
-	}
-	if int64(len(p)) > l.N {
-		p = p[0:l.N]
+	if len(p) > l.N {
+		return 0, ErrLimitExceeded
 	}
 	n, err = l.W.Write(p)
-	l.N -= int64(n)
+	l.N -= n
 	return
 }

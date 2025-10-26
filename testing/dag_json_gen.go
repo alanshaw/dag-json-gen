@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -15,6 +16,7 @@ import (
 var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
+var _ = errors.Is
 
 func (t *SignedArray) MarshalDagJSON(w io.Writer) error {
 	jw := jsg.NewDagJsonWriter(w)
@@ -96,9 +98,8 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]uint64, 1)
 				for i := 0; i < 8192; i++ {
-
+					item := make([]uint64, 1)
 					{
 
 						nval, err := jr.ReadNumberAsUint64()
@@ -143,7 +144,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 
 	// t.Foo (string) (string)
 	if len(t.Foo) > 8192 {
-		return fmt.Errorf("Value in field t.Foo was too long: %d", len(t.Foo))
+		return fmt.Errorf("String in field t.Foo was too long")
 	}
 	if err := jw.WriteString(string(t.Foo)); err != nil {
 		return fmt.Errorf("t.Foo: %w", err)
@@ -187,7 +188,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 
 	// t.NString (testing.NamedString) (string)
 	if len(t.NString) > 8192 {
-		return fmt.Errorf("Value in field t.NString was too long: %d", len(t.NString))
+		return fmt.Errorf("String in field t.NString was too long")
 	}
 	if err := jw.WriteString(string(t.NString)); err != nil {
 		return fmt.Errorf("t.NString: %w", err)
@@ -211,7 +212,7 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 			}
 		}
 		if len(v) > 8192 {
-			return fmt.Errorf("Value in field v was too long: %d", len(v))
+			return fmt.Errorf("String in field v was too long")
 		}
 		if err := jw.WriteString(string(v)); err != nil {
 			return fmt.Errorf("v: %w", err)
@@ -254,6 +255,9 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Foo: string too long")
+				}
 				return fmt.Errorf("t.Foo: %w", err)
 			}
 			t.Foo = string(sval)
@@ -294,9 +298,14 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			bval, err := jr.ReadBytes(2097152)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Binary: byte array too large")
+				}
 				return fmt.Errorf("t.Binary: %w", err)
 			}
-			t.Binary = []uint8(bval)
+			if len(bval) > 0 {
+				t.Binary = []uint8(bval)
+			}
 		}
 
 		{
@@ -335,6 +344,9 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.NString: string too long")
+				}
 				return fmt.Errorf("t.NString: %w", err)
 			}
 			t.NString = NamedString(sval)
@@ -367,12 +379,14 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]string, 1)
 				for i := 0; i < 8192; i++ {
-
+					item := make([]string, 1)
 					{
 						sval, err := jr.ReadString(8192)
 						if err != nil {
+							if errors.Is(err, jsg.ErrLimitExceeded) {
+								return fmt.Errorf("item[0]: string too long")
+							}
 							return fmt.Errorf("item[0]: %w", err)
 						}
 						item[0] = string(sval)
@@ -507,7 +521,7 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 
 	// t.Dog (string) (string)
 	if len(t.Dog) > 8192 {
-		return fmt.Errorf("Value in field t.Dog was too long: %d", len(t.Dog))
+		return fmt.Errorf("String in field t.Dog was too long")
 	}
 	if err := jw.WriteString(string(t.Dog)); err != nil {
 		return fmt.Errorf("t.Dog: %w", err)
@@ -671,9 +685,8 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]uint64, 1)
 				for i := 0; i < 8192; i++ {
-
+					item := make([]uint64, 1)
 					{
 
 						nval, err := jr.ReadNumberAsUint64()
@@ -727,9 +740,8 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]int64, 1)
 				for i := 0; i < 8192; i++ {
-
+					item := make([]int64, 1)
 					{
 
 						nval, err := jr.ReadNumberAsInt64()
@@ -783,15 +795,20 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([][]uint8, 1)
 				for i := 0; i < 8192; i++ {
+					item := make([][]uint8, 1)
 
 					{
 						bval, err := jr.ReadBytes(2097152)
 						if err != nil {
+							if errors.Is(err, jsg.ErrLimitExceeded) {
+								return fmt.Errorf("item[0]: byte array too large")
+							}
 							return fmt.Errorf("item[0]: %w", err)
 						}
-						item[0] = []uint8(bval)
+						if len(bval) > 0 {
+							item[0] = []uint8(bval)
+						}
 					}
 
 					t.Test = append(t.Test, item[0])
@@ -825,6 +842,9 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Dog: string too long")
+				}
 				return fmt.Errorf("t.Dog: %w", err)
 			}
 			t.Dog = string(sval)
@@ -857,9 +877,8 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]NamedNumber, 1)
 				for i := 0; i < 8192; i++ {
-
+					item := make([]NamedNumber, 1)
 					{
 
 						nval, err := jr.ReadNumberAsUint64()
@@ -1283,7 +1302,7 @@ func (t *ThingWithSomeTime) MarshalDagJSON(w io.Writer) error {
 
 	// t.CatName (string) (string)
 	if len(t.CatName) > 8192 {
-		return fmt.Errorf("Value in field t.CatName was too long: %d", len(t.CatName))
+		return fmt.Errorf("String in field t.CatName was too long")
 	}
 	if err := jw.WriteString(string(t.CatName)); err != nil {
 		return fmt.Errorf("t.CatName: %w", err)
@@ -1358,6 +1377,9 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8192)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.CatName: string too long")
+				}
 				return fmt.Errorf("t.CatName: %w", err)
 			}
 			t.CatName = string(sval)
@@ -1421,9 +1443,14 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			bval, err := jr.ReadBytes(10000000)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.LargeBytes: byte array too large")
+				}
 				return fmt.Errorf("t.LargeBytes: %w", err)
 			}
-			t.LargeBytes = []uint8(bval)
+			if len(bval) > 0 {
+				t.LargeBytes = []uint8(bval)
+			}
 		}
 
 		if err := jr.ReadArrayClose(); err != nil {
@@ -1486,9 +1513,8 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 
 		} else {
-			item := make([]int64, 1)
 			for i := 0; i < 8192; i++ {
-
+				item := make([]int64, 1)
 				{
 
 					nval, err := jr.ReadNumberAsInt64()
@@ -1570,9 +1596,8 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 
 		} else {
-			item := make([]IntAlias, 1)
 			for i := 0; i < 8192; i++ {
-
+				item := make([]IntAlias, 1)
 				{
 
 					nval, err := jr.ReadNumberAsInt64()
@@ -1951,9 +1976,8 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 
 		} else {
-			item := make([]int64, 1)
 			for i := 0; i < 8192; i++ {
-
+				item := make([]int64, 1)
 				{
 
 					nval, err := jr.ReadNumberAsInt64()
@@ -2035,9 +2059,8 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 			}
 
 		} else {
-			item := make([]IntAlias, 1)
 			for i := 0; i < 8192; i++ {
-
+				item := make([]IntAlias, 1)
 				{
 
 					nval, err := jr.ReadNumberAsInt64()
@@ -2092,7 +2115,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 			}
 			v := (*t)[k]
 			if len(k) > 8192 {
-				return fmt.Errorf("Value in field k was too long: %d", len(k))
+				return fmt.Errorf("String in field k was too long")
 			}
 			if err := jw.WriteString(string(k)); err != nil {
 				return fmt.Errorf("k: %w", err)
@@ -2102,7 +2125,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 			}
 
 			if len(v) > 8192 {
-				return fmt.Errorf("Value in field v was too long: %d", len(v))
+				return fmt.Errorf("String in field v was too long")
 			}
 			if err := jw.WriteString(string(v)); err != nil {
 				return fmt.Errorf("v: %w", err)
@@ -2129,36 +2152,51 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 
 	(*t) = map[string]string{}
 
-	for i, l := 0, 8192; i < l; i++ {
-		var k string
-		{
-			sval, err := jr.ReadString(8192)
-			if err != nil {
-				return fmt.Errorf("k: %w", err)
-			}
-			k = string(sval)
-		}
-		if err := jr.ReadObjectColon(); err != nil {
+	close, err := jr.PeekObjectClose()
+	if err != nil {
+		return fmt.Errorf("(*t): %w", err)
+	}
+	if close {
+		if err := jr.ReadObjectClose(); err != nil {
 			return fmt.Errorf("(*t): %w", err)
 		}
-		var v string
-		{
-			sval, err := jr.ReadString(8192)
-			if err != nil {
-				return fmt.Errorf("v: %w", err)
+	} else {
+		for i, l := 0, 8192; i < l; i++ {
+			var k string
+			{
+				sval, err := jr.ReadString(8192)
+				if err != nil {
+					if errors.Is(err, jsg.ErrLimitExceeded) {
+						return fmt.Errorf("k: string too long")
+					}
+					return fmt.Errorf("k: %w", err)
+				}
+				k = string(sval)
 			}
-			v = string(sval)
-		}
-		(*t)[k] = v
-		close, err := jr.ReadObjectCloseOrComma()
-		if err != nil {
-			return fmt.Errorf("(*t): %w", err)
-		}
-		if close {
-			break
+			if err := jr.ReadObjectColon(); err != nil {
+				return fmt.Errorf("(*t): %w", err)
+			}
+			var v string
+			{
+				sval, err := jr.ReadString(8192)
+				if err != nil {
+					if errors.Is(err, jsg.ErrLimitExceeded) {
+						return fmt.Errorf("v: string too long")
+					}
+					return fmt.Errorf("v: %w", err)
+				}
+				v = string(sval)
+			}
+			(*t)[k] = v
+			close, err := jr.ReadObjectCloseOrComma()
+			if err != nil {
+				return fmt.Errorf("(*t): %w", err)
+			}
+			if close {
+				break
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -2218,6 +2256,9 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			nval, err := jr.ReadNumberAsBigInt(256)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Int: number too large")
+				}
 				return fmt.Errorf("t.Int: %w", err)
 			}
 			t.Int = nval

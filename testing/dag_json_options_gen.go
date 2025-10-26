@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -15,6 +16,7 @@ import (
 var _ = cid.Undef
 var _ = math.E
 var _ = sort.Sort
+var _ = errors.Is
 
 func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 	jw := jsg.NewDagJsonWriter(w)
@@ -69,7 +71,7 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 
 	// t.Str (string) (string)
 	if len(t.Str) > 8 {
-		return fmt.Errorf("Value in field t.Str was too long: %d", len(t.Str))
+		return fmt.Errorf("String in field t.Str was too long")
 	}
 	if err := jw.WriteString(string(t.Str)); err != nil {
 		return fmt.Errorf("t.Str: %w", err)
@@ -120,9 +122,8 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 				}
 
 			} else {
-				item := make([]uint64, 1)
 				for i := 0; i < 10; i++ {
-
+					item := make([]uint64, 1)
 					{
 
 						nval, err := jr.ReadNumberAsUint64()
@@ -163,9 +164,14 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			bval, err := jr.ReadBytes(9)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Byts: byte array too large")
+				}
 				return fmt.Errorf("t.Byts: %w", err)
 			}
-			t.Byts = []uint8(bval)
+			if len(bval) > 0 {
+				t.Byts = []uint8(bval)
+			}
 		}
 
 		{
@@ -183,6 +189,9 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			sval, err := jr.ReadString(8)
 			if err != nil {
+				if errors.Is(err, jsg.ErrLimitExceeded) {
+					return fmt.Errorf("t.Str: string too long")
+				}
 				return fmt.Errorf("t.Str: %w", err)
 			}
 			t.Str = string(sval)

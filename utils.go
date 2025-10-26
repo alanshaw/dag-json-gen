@@ -5,8 +5,6 @@ import (
 	"io"
 	"reflect"
 	"sort"
-
-	cid "github.com/ipfs/go-cid"
 )
 
 var errMaxLength = fmt.Errorf("length beyond maximum allowed")
@@ -17,45 +15,6 @@ type DagJsonUnmarshaler interface {
 
 type DagJsonMarshaler interface {
 	MarshalDagJSON(io.Writer) error
-}
-
-func ReadCid(r io.Reader) (cid.Cid, error) {
-	jr := NewDagJsonReader(r)
-	if err := jr.ReadObjectOpen(); err != nil {
-		return cid.Undef, err
-	}
-	slash, err := jr.ReadString(1)
-	if err != nil {
-		return cid.Undef, err
-	}
-	if slash != "/" {
-		return cid.Undef, fmt.Errorf("expected / but read %s", slash)
-	}
-	s, err := jr.ReadString(59)
-	if err != nil {
-		return cid.Undef, err
-	}
-	// TODO: spec compliance:
-	// decode multibase base32 then decode CIDv1
-	// or
-	// decode base58btc then decode CIDv0
-	parsed, err := cid.Parse(s)
-	if err != nil {
-		return cid.Undef, err
-	}
-	if err := jr.ReadObjectClose(); err != nil {
-		return cid.Undef, err
-	}
-	return parsed, nil
-}
-
-func WriteCid(w io.Writer, c cid.Cid) error {
-	buf, err := cid.Cid(c).MarshalJSON()
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(buf)
-	return err
 }
 
 // sort type example objects on name of type
