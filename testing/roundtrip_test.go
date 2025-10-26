@@ -2,7 +2,6 @@ package testing
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/quick"
 	"time"
@@ -92,12 +92,12 @@ func TestBigInt(t *testing.T) {
 }
 
 type RoundTripOptions struct {
-	Golden []byte
+	Golden string
 }
 
 type RoundTripOption func(*RoundTripOptions)
 
-func WithGolden(golden []byte) RoundTripOption {
+func WithGolden(golden string) RoundTripOption {
 	return func(opts *RoundTripOptions) {
 		opts.Golden = golden
 	}
@@ -116,11 +116,12 @@ func testValueRoundtrip(t *testing.T, obj jsg.DagJsonMarshaler, nobj jsg.DagJson
 		t.Fatal("i guess its fine to fail marshaling", err)
 	}
 
+	// t.Log(buf.String())
 	enc := buf.Bytes()
 
-	if opts.Golden != nil {
-		if !bytes.Equal(opts.Golden, enc) {
-			t.Fatalf("encoding mismatch: %x != %x", opts.Golden, enc)
+	if opts.Golden != "" {
+		if opts.Golden != buf.String() {
+			t.Fatalf("encoding mismatch: %s != %s", opts.Golden, buf.String())
 		}
 	}
 
@@ -169,7 +170,7 @@ func TestDeferredContainer(t *testing.T) {
 
 func TestNilValueDeferredUnmarshaling(t *testing.T) {
 	var zero DeferredContainer
-	zero.Deferred = &jsg.Deferred{Raw: []byte{0xf6}}
+	zero.Deferred = &jsg.Deferred{Raw: []byte("null")}
 
 	buf := new(bytes.Buffer)
 	if err := zero.MarshalDagJSON(buf); err != nil {
@@ -517,20 +518,20 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip", func(t *testing.T) {
 		zero := &IntArray{}
 		recepticle := &IntArray{}
-		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+		testValueRoundtrip(t, zero, recepticle, WithGolden("[]"))
 	})
 
 	t.Run("roundtrip intalias", func(t *testing.T) {
 		zero := &IntAliasArray{}
 		recepticle := &IntAliasArray{}
-		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+		testValueRoundtrip(t, zero, recepticle, WithGolden("[]"))
 	})
 
 	// non-zero values
 	t.Run("roundtrip non-zero", func(t *testing.T) {
 		val := &IntArray{Ints: []int64{1, 2, 3}}
 		recepticle := &IntArray{}
-		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		testValueRoundtrip(t, val, recepticle, WithGolden("[1,2,3]"))
 	})
 	t.Run("roundtrip non-zero intalias", func(t *testing.T) {
 		val := &IntAliasArray{Ints: []IntAlias{1, 2, 3}}
@@ -542,7 +543,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip tuple struct to transparent", func(t *testing.T) {
 		val := &TupleIntArray{2, 4, 5}
 		recepticle := &IntArray{}
-		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		testValueRoundtrip(t, val, recepticle, WithGolden("[2,4,5]"))
 		if val.Int1 != recepticle.Ints[0] {
 			t.Fatal("mismatch")
 		}
@@ -550,7 +551,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip transparent to tuple struct", func(t *testing.T) {
 		val := &IntArray{Ints: []int64{2, 4, 5}}
 		recepticle := &TupleIntArray{}
-		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		testValueRoundtrip(t, val, recepticle, WithGolden("[2,4,5]"))
 		if val.Ints[0] != recepticle.Int1 {
 			t.Fatal("mismatch")
 		}
@@ -560,7 +561,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip IntArrayNewType", func(t *testing.T) {
 		zero := &IntArrayNewType{}
 		recepticle := &IntArrayNewType{}
-		testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x80}))
+		testValueRoundtrip(t, zero, recepticle, WithGolden("[]"))
 	})
 	t.Run("roundtrip IntArrayAliasNewType", func(t *testing.T) {
 		zero := &IntArrayAliasNewType{}
@@ -570,18 +571,18 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip non-zero IntArrayNewType", func(t *testing.T) {
 		val := &IntArrayNewType{1, 2, 3}
 		recepticle := &IntArrayNewType{}
-		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		testValueRoundtrip(t, val, recepticle, WithGolden("[1,2,3]"))
 	})
 	t.Run("roundtrip non-zero IntArrayAliasNewType", func(t *testing.T) {
 		val := &IntArrayAliasNewType{1, 2, 3}
 		recepticle := &IntArrayAliasNewType{}
-		testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		testValueRoundtrip(t, val, recepticle, WithGolden("[1,2,3]"))
 	})
 	// NewTypes into/from TupleIntArray
 	t.Run("roundtrip IntArrayNewType to TupleIntArray", func(t *testing.T) {
 		val := IntArrayNewType{1, 2, 3}
 		recepticle := &TupleIntArray{}
-		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		testValueRoundtrip(t, &val, recepticle, WithGolden("[1,2,3]"))
 		if val[0] != recepticle.Int1 {
 			t.Fatal("mismatch")
 		}
@@ -589,7 +590,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip IntArrayAliasNewType to TupleIntArray", func(t *testing.T) {
 		val := IntArrayAliasNewType{1, 2, 3}
 		recepticle := &TupleIntArray{}
-		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0x83, 0x01, 0x02, 0x03}))
+		testValueRoundtrip(t, &val, recepticle, WithGolden("[1,2,3]"))
 		if int64(val[0]) != recepticle.Int1 {
 			t.Fatal("mismatch")
 		}
@@ -597,7 +598,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip TupleIntArray to IntArrayNewType", func(t *testing.T) {
 		val := TupleIntArray{2, 4, 5}
 		recepticle := IntArrayNewType{}
-		testValueRoundtrip(t, &val, &recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		testValueRoundtrip(t, &val, &recepticle, WithGolden("[2,4,5]"))
 		if val.Int1 != recepticle[0] {
 			t.Fatal("mismatch")
 		}
@@ -605,7 +606,7 @@ func TestTransparentIntArray(t *testing.T) {
 	t.Run("roundtrip TupleIntArray to IntArrayAliasNewType", func(t *testing.T) {
 		val := TupleIntArray{2, 4, 5}
 		recepticle := IntArrayAliasNewType{}
-		testValueRoundtrip(t, &val, &recepticle, WithGolden([]byte{0x83, 0x02, 0x04, 0x05}))
+		testValueRoundtrip(t, &val, &recepticle, WithGolden("[2,4,5]"))
 		if val.Int1 != int64(recepticle[0]) {
 			t.Fatal("mismatch")
 		}
@@ -616,21 +617,21 @@ func TestMapTransparentType(t *testing.T) {
 	t.Run("roundtrip", func(t *testing.T) {
 		zero := MapTransparentType{}
 		recepticle := &MapTransparentType{}
-		testValueRoundtrip(t, &zero, recepticle, WithGolden([]byte{0xa0}))
+		testValueRoundtrip(t, &zero, recepticle, WithGolden("{}"))
 	})
 
 	// non-zero values
 	t.Run("roundtrip non-zero", func(t *testing.T) {
 		val := MapTransparentType(map[string]string{"foo": "bar"})
 		recepticle := &MapTransparentType{}
-		testValueRoundtrip(t, &val, recepticle, WithGolden([]byte{0xa1, 0x63, 0x66, 0x6f, 0x6f, 0x63, 0x62, 0x61, 0x72}))
+		testValueRoundtrip(t, &val, recepticle, WithGolden(`{"foo":"bar"}`))
 	})
 }
 
 func TestConfigurability(t *testing.T) {
 	t.Run("MaxArrayLength", func(t *testing.T) {
-		good, _ := hex.DecodeString("838a010203040506070809004060")
-		bad, _ := hex.DecodeString("838b01020304050607080900004060")
+		good := "[1,2,3,4,5,6,7,8,9,0]"
+		bad := "[1,2,3,4,5,6,7,8,9,0,0]"
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Arr: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}}
@@ -648,7 +649,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(strings.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -658,7 +659,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "t.Arr: array too large (11)" {
@@ -668,13 +669,13 @@ func TestConfigurability(t *testing.T) {
 	})
 
 	t.Run("MaxByteLength", func(t *testing.T) {
-		good, _ := hex.DecodeString("83804931323334353637383960")
-		bad, _ := hex.DecodeString("83804a3132333435363738393060")
+		good := `{"/":{"bytes","mmmmmmmmm"}}`
+		bad := `{"/":{"bytes","mmmmmmmmmm"}}`
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Byts: []byte("123456789")}
 			recepticle := &LimitedStruct{}
-			testValueRoundtrip(t, &ls, recepticle, WithGolden(good))
+			testValueRoundtrip(t, &ls, recepticle, WithGolden(`{"/":{"bytes","kslklsklksl"}}`))
 
 			ls.Byts = []byte("1234567890")
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
@@ -687,7 +688,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(strings.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -697,7 +698,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "t.Byts: byte array too large (10)" {
@@ -707,8 +708,8 @@ func TestConfigurability(t *testing.T) {
 	})
 
 	t.Run("MaxStringLength", func(t *testing.T) {
-		good, _ := hex.DecodeString("838040683132333435363738")
-		bad, _ := hex.DecodeString("83804069313233343536373839")
+		good := "12345678"
+		bad := "123456789"
 
 		t.Run("Marshal", func(t *testing.T) {
 			ls := LimitedStruct{Str: "12345678"}
@@ -726,7 +727,7 @@ func TestConfigurability(t *testing.T) {
 
 		t.Run("Unmarshal", func(t *testing.T) {
 			ls := LimitedStruct{}
-			err := ls.UnmarshalDagJSON(bytes.NewReader(good))
+			err := ls.UnmarshalDagJSON(strings.NewReader(good))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -736,7 +737,7 @@ func TestConfigurability(t *testing.T) {
 			}
 
 			ls = LimitedStruct{}
-			err = ls.UnmarshalDagJSON(bytes.NewReader(bad))
+			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
 			} else if err.Error() != "string in input was too long" {
@@ -749,7 +750,7 @@ func TestConfigurability(t *testing.T) {
 func TestOptionalInts(t *testing.T) {
 	zero := &TupleIntArrayOptionals{}
 	recepticle := &TupleIntArrayOptionals{}
-	testValueRoundtrip(t, zero, recepticle, WithGolden([]byte{0x84, 0xf6, 0x00, 0x00, 0xf6}))
+	testValueRoundtrip(t, zero, recepticle, WithGolden("[null,0,0,null]"))
 
 	val := &TupleIntArrayOptionals{
 		Int1: ptr(int64(1)),
@@ -758,7 +759,7 @@ func TestOptionalInts(t *testing.T) {
 		Int4: ptr(uint64(4)),
 	}
 	recepticle = &TupleIntArrayOptionals{}
-	testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x84, 0x01, 0x02, 0x03, 0x04}))
+	testValueRoundtrip(t, val, recepticle, WithGolden("[1,2,3,4]"))
 
 	val = &TupleIntArrayOptionals{
 		Int1: nil,
@@ -767,7 +768,7 @@ func TestOptionalInts(t *testing.T) {
 		Int4: nil,
 	}
 	recepticle = &TupleIntArrayOptionals{}
-	testValueRoundtrip(t, val, recepticle, WithGolden([]byte{0x84, 0xf6, 0x02, 0x03, 0xf6}))
+	testValueRoundtrip(t, val, recepticle, WithGolden("[null,2,3,null]"))
 }
 
 func TestStringPtrSlices(t *testing.T) {

@@ -134,6 +134,133 @@ func (d *DagJsonReader) token() (jsontokenizer.TokType, error) {
 	return d.tk.Token()
 }
 
+func (d *DagJsonReader) peekToken() (jsontokenizer.TokType, error) {
+	if d.peek != -1 {
+		return d.peek, nil
+	}
+	tok, err := d.tk.Token()
+	if err != nil {
+		return tok, err
+	}
+	d.peek = tok
+	return tok, nil
+}
+
+// PeekType returns the name of the next JSON type in the stream. It errors if
+// the next token is NOT the start of an object, array, number, string, boolean
+// or null.
+//
+// It returns either "object", "array", "string", "boolean" or "null".
+func (d *DagJsonReader) PeekType() (string, error) {
+	tok, err := d.peekToken()
+	if err != nil {
+		return "", err
+	}
+	switch tok {
+	case jsontokenizer.TokNull:
+		return "null", nil
+	case jsontokenizer.TokTrue, jsontokenizer.TokFalse:
+		return "boolean", nil
+	case jsontokenizer.TokArrayOpen:
+		return "array", nil
+	case jsontokenizer.TokObjectOpen:
+		return "object", nil
+	case jsontokenizer.TokNumber:
+		return "number", nil
+	case jsontokenizer.TokString:
+		return "string", nil
+	default:
+		return "", fmt.Errorf("unexpected state, wanted start of type but read: %s", tokenName(tok))
+	}
+}
+
+// DiscardType reads the next JSON type in full and discards it.
+func (d *DagJsonReader) DiscardType() error {
+	typ, err := d.PeekType()
+	if err != nil {
+		return err
+	}
+	switch typ {
+	case "object":
+		if err := d.ReadObjectOpen(); err != nil {
+			return err
+		}
+		for {
+			close, err := d.PeekObjectClose()
+			if err != nil {
+				return err
+			}
+			if close {
+				if err := d.ReadObjectClose(); err != nil {
+					return err
+				}
+				break
+			}
+			if _, err := d.ReadString(MaxLength); err != nil {
+				return err
+			}
+			if err := d.ReadObjectColon(); err != nil {
+				return err
+			}
+			if err := d.DiscardType(); err != nil {
+				return err
+			}
+			close, err = d.ReadObjectCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+		}
+	case "array":
+		if err := d.ReadArrayOpen(); err != nil {
+			return err
+		}
+		for {
+			close, err := d.PeekArrayClose()
+			if err != nil {
+				return err
+			}
+			if close {
+				if err := d.ReadArrayClose(); err != nil {
+					return err
+				}
+				break
+			}
+			if err := d.DiscardType(); err != nil {
+				return err
+			}
+			close, err = d.ReadArrayCloseOrComma()
+			if err != nil {
+				return err
+			}
+			if close {
+				break
+			}
+		}
+	case "number":
+		if _, err := d.ReadNumberAsString(MaxLength); err != nil {
+			return err
+		}
+	case "string":
+		if _, err := d.ReadString(MaxLength); err != nil {
+			return err
+		}
+	case "boolean":
+		if _, err := d.ReadBool(); err != nil {
+			return err
+		}
+	case "null":
+		if err := d.ReadNull(); err != nil {
+			return err
+		}
+	default:
+		panic(fmt.Errorf("unknown JSON type: %s", typ))
+	}
+	return nil
+}
+
 // Read from the underlying reader. You almost certainly don't want to do this.
 func (d *DagJsonReader) Read(p []byte) (int, error) {
 	return d.r.Read(p)
@@ -152,14 +279,10 @@ func (d *DagJsonReader) ReadNull() error {
 
 // PeekNull returns true if the next token is null.
 func (d *DagJsonReader) PeekNull() (bool, error) {
-	if d.peek > -1 {
-		return false, errors.New("reader is already peeked")
-	}
-	tok, err := d.token()
+	tok, err := d.peekToken()
 	if err != nil {
 		return false, err
 	}
-	d.peek = tok
 	return tok == jsontokenizer.TokNull, nil
 }
 
@@ -304,6 +427,21 @@ func (d *DagJsonReader) ReadCidOrNull() (*cid.Cid, error) {
 		return nil, err
 	}
 	return &parsed, nil
+}
+
+func (d *DagJsonReader) ReadNumberAsString(maxLength int64) (string, error) {
+	tok, err := d.token()
+	if err != nil {
+		return "", err
+	}
+	if tok != jsontokenizer.TokNumber {
+		return "", fmt.Errorf("expected number but read %s", tokenName(tok))
+	}
+	var buf bytes.Buffer
+	if _, err := d.tk.ReadNumber(LimitWriter(&buf, maxLength)); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (d *DagJsonReader) ReadNumberAsUint8() (uint8, error) {
@@ -469,6 +607,15 @@ func (d *DagJsonReader) ReadObjectOpen() error {
 	return nil
 }
 
+// PeekArrayClose returns true if the next token is "}".
+func (d *DagJsonReader) PeekObjectClose() (bool, error) {
+	tok, err := d.peekToken()
+	if err != nil {
+		return false, err
+	}
+	return tok == jsontokenizer.TokObjectClose, nil
+}
+
 func (d *DagJsonReader) ReadObjectClose() error {
 	tok, err := d.token()
 	if err != nil {
@@ -523,14 +670,10 @@ func (d *DagJsonReader) ReadArrayOpenOrNull() (bool, error) {
 
 // PeekArrayClose returns true if the next token is "]".
 func (d *DagJsonReader) PeekArrayClose() (bool, error) {
-	if d.peek > -1 {
-		return false, errors.New("reader is already peeked")
-	}
-	tok, err := d.token()
+	tok, err := d.peekToken()
 	if err != nil {
 		return false, err
 	}
-	d.peek = tok
 	return tok == jsontokenizer.TokArrayClose, nil
 }
 

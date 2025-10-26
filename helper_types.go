@@ -20,11 +20,12 @@ func (jt DagJsonTime) MarshalDagJSON(w io.Writer) error {
 
 func (jt *DagJsonTime) UnmarshalDagJSON(r io.Reader) error {
 	var nsecs int64
-	// json.Unmarshal()
-	// TODO: unmarshal
-
-	t := time.Unix(0, int64(nsecs))
-
+	jr := NewDagJsonReader(r)
+	nsecs, err := jr.ReadNumberAsInt64()
+	if err != nil {
+		return nil
+	}
+	t := time.Unix(0, nsecs)
 	*jt = (DagJsonTime)(t)
 	return nil
 }

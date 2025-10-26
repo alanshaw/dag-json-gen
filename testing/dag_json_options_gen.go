@@ -23,7 +23,7 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("LimitedStruct: %w", err)
 	}
 
 	// t.Arr ([]uint64) (slice)
@@ -32,26 +32,26 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return err
+		return fmt.Errorf("t.Arr: %w", err)
 	}
 	for i, v := range t.Arr {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return err
+				return fmt.Errorf("t.Arr: %w", err)
 			}
 		}
 
 		if err := jw.WriteUint64(uint64(v)); err != nil {
-			return err
+			return fmt.Errorf("v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("t.Arr: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return err
+		return fmt.Errorf("Byts: %w", err)
 	}
 
 	// t.Byts ([]uint8) (slice)
@@ -60,11 +60,11 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 	}
 
 	if err := jw.WriteBytes(t.Byts); err != nil {
-		return err
+		return fmt.Errorf("t.Byts: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return err
+		return fmt.Errorf("Str: %w", err)
 	}
 
 	// t.Str (string) (string)
@@ -72,10 +72,10 @@ func (t *LimitedStruct) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("Value in field t.Str was too long: %d", len(t.Str))
 	}
 	if err := jw.WriteString(string(t.Str)); err != nil {
-		return err
+		return fmt.Errorf("t.Str: %w", err)
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return err
+		return fmt.Errorf("LimitedStruct: %w", err)
 	}
 	return nil
 }
@@ -92,94 +92,104 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 	if err := jr.ReadArrayOpen(); err != nil {
 		return fmt.Errorf("LimitedStruct: %w", err)
 	}
-
-	// t.Arr ([]uint64) (slice)
-
-	{
-
-		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("t.Arr: %w", err)
+	close, err := jr.PeekArrayClose()
+	if err != nil {
+		return fmt.Errorf("LimitedStruct: %w", err)
+	}
+	if close {
+		if err := jr.ReadArrayClose(); err != nil {
+			return fmt.Errorf("LimitedStruct: %w", err)
 		}
+	} else {
 
-		close, err := jr.PeekArrayClose()
-		if err != nil {
-			return fmt.Errorf("t.Arr: %w", err)
-		}
-		if close {
-			if err := jr.ReadArrayClose(); err != nil {
+		// t.Arr ([]uint64) (slice)
+
+		{
+
+			if err := jr.ReadArrayOpen(); err != nil {
 				return fmt.Errorf("t.Arr: %w", err)
 			}
-			t.Arr = []uint64{}
-		} else {
-			item := make([]uint64, 1)
-			for i := 0; i < 10; i++ {
 
-				{
-
-					nval, err := jr.ReadNumberAsUint64()
-					if err != nil {
-						return fmt.Errorf("item[0]: %w", err)
-					}
-					item[0] = uint64(nval)
-
-				}
-				t.Arr = append(t.Arr, item[0])
-
-				close, err := jr.ReadArrayCloseOrComma()
-				if err != nil {
+			close, err := jr.PeekArrayClose()
+			if err != nil {
+				return fmt.Errorf("t.Arr: %w", err)
+			}
+			if close {
+				if err := jr.ReadArrayClose(); err != nil {
 					return fmt.Errorf("t.Arr: %w", err)
 				}
-				if close {
-					break
+
+			} else {
+				item := make([]uint64, 1)
+				for i := 0; i < 10; i++ {
+
+					{
+
+						nval, err := jr.ReadNumberAsUint64()
+						if err != nil {
+							return fmt.Errorf("item[0]: %w", err)
+						}
+						item[0] = uint64(nval)
+
+					}
+					t.Arr = append(t.Arr, item[0])
+
+					close, err := jr.ReadArrayCloseOrComma()
+					if err != nil {
+						return fmt.Errorf("t.Arr: %w", err)
+					}
+					if close {
+						break
+					}
+					if i == 10-1 {
+						return fmt.Errorf("t.Arr: slice too large")
+					}
 				}
-				if i == 10-1 {
-					return fmt.Errorf("t.Arr: slice too large")
-				}
+			}
+
+		}
+		{
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return fmt.Errorf("LimitedStruct: %w", err)
+			}
+			if close {
+				return fmt.Errorf("json input has too few fields 1 < 3")
 			}
 		}
 
-	}
-	{
-		close, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
+		// t.Byts ([]uint8) (slice)
+
+		{
+			bval, err := jr.ReadBytes(9)
+			if err != nil {
+				return fmt.Errorf("t.Byts: %w", err)
+			}
+			t.Byts = []uint8(bval)
+		}
+
+		{
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return fmt.Errorf("LimitedStruct: %w", err)
+			}
+			if close {
+				return fmt.Errorf("json input has too few fields 2 < 3")
+			}
+		}
+
+		// t.Str (string) (string)
+
+		{
+			sval, err := jr.ReadString(8)
+			if err != nil {
+				return fmt.Errorf("t.Str: %w", err)
+			}
+			t.Str = string(sval)
+		}
+		if err := jr.ReadArrayClose(); err != nil {
 			return fmt.Errorf("LimitedStruct: %w", err)
 		}
-		if close {
-			return fmt.Errorf("json input has too few fields 1 < 3")
-		}
-	}
-
-	// t.Byts ([]uint8) (slice)
-
-	{
-		bval, err := jr.ReadBytes(9)
-		if err != nil {
-			return fmt.Errorf("t.Byts: %w", err)
-		}
-		t.Byts = []uint8(bval)
-	}
-
-	{
-		close, err := jr.ReadArrayCloseOrComma()
-		if err != nil {
-			return fmt.Errorf("LimitedStruct: %w", err)
-		}
-		if close {
-			return fmt.Errorf("json input has too few fields 2 < 3")
-		}
-	}
-
-	// t.Str (string) (string)
-
-	{
-		sval, err := jr.ReadString(8)
-		if err != nil {
-			return fmt.Errorf("t.Str: %w", err)
-		}
-		t.Str = string(sval)
-	}
-	if err := jr.ReadArrayClose(); err != nil {
-		return fmt.Errorf("LimitedStruct: %w", err)
 	}
 	return nil
 }

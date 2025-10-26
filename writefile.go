@@ -101,10 +101,11 @@ func (g Gen) WriteMapEncodersToFile(fname, pkg string, types ...interface{}) err
 		}
 	}
 
-	data, err := format.Source(buf.Bytes())
-	if err != nil {
-		return err
-	}
+	data := buf.Bytes()
+	// data, err := format.Source(buf.Bytes())
+	// if err != nil {
+	// 	return err
+	// }
 
 	fi, err := os.Create(fname)
 	if err != nil {
