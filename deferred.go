@@ -25,7 +25,7 @@ func (d *Deferred) MarshalDagJSON(w io.Writer) error {
 
 func (d *Deferred) UnmarshalDagJSON(r io.Reader) error {
 	var buf bytes.Buffer
-	err := parse(r, &buf)
+	err := parse(r, NewLimitWriter(&buf, ByteArrayMaxLen))
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, n); err != nil {
+		if _, err := fmt.Fprintf(w, "%s", n); err != nil {
 			return err
 		}
 	case "string":

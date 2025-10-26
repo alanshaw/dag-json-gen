@@ -1,13 +1,10 @@
 package typegen
 
 import (
-	"fmt"
 	"io"
 	"reflect"
 	"sort"
 )
-
-var errMaxLength = fmt.Errorf("length beyond maximum allowed")
 
 type DagJsonUnmarshaler interface {
 	UnmarshalDagJSON(io.Reader) error

@@ -1,19 +1,16 @@
 package typegen
 
 import (
-	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 )
 
 func TestDeferredMaxLengthSingle(t *testing.T) {
-	var header bytes.Buffer
-	// if err := WriteMajorTypeHeader(&header, MajByteString, ByteArrayMaxLen+1); err != nil {
-	// 	t.Fatal("failed to write header")
-	// }
-
+	data := fmt.Sprintf("%q", strings.Repeat("0", ByteArrayMaxLen+1))
 	var deferred Deferred
-	err := deferred.UnmarshalDagJSON(&header)
-	if err != errMaxLength {
+	err := deferred.UnmarshalDagJSON(strings.NewReader(data))
+	if err != ErrLimitExceeded {
 		t.Fatal("deferred: allowed more than the maximum allocation supported")
 	}
 }

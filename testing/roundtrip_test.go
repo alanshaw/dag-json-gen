@@ -14,11 +14,9 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/ipfs/go-cid"
-
-	"github.com/google/go-cmp/cmp"
-
 	jsg "github.com/alanshaw/dag-json-gen"
+	"github.com/google/go-cmp/cmp"
+	"github.com/ipfs/go-cid"
 )
 
 var alwaysEqual = cmp.Comparer(func(_, _ interface{}) bool { return true })

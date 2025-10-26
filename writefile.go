@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"go/format"
 	"os"
-
-	"golang.org/x/xerrors"
 )
 
 // WriteTupleFileEncodersToFile is a convenience wrapper around Gen.WriteTupleEncodersToFile using
@@ -30,18 +28,18 @@ func (g Gen) WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) e
 	for i, t := range types {
 		gti, err := ParseTypeInfo(t)
 		if err != nil {
-			return xerrors.Errorf("failed to parse type info: %w", err)
+			return fmt.Errorf("failed to parse type info: %w", err)
 		}
 		typeInfos[i] = gti
 	}
 
 	if err := g.PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
-		return xerrors.Errorf("failed to write header: %w", err)
+		return fmt.Errorf("failed to write header: %w", err)
 	}
 
 	for _, t := range typeInfos {
 		if err := g.GenTupleEncodersForType(t, buf); err != nil {
-			return xerrors.Errorf("failed to generate encoders: %w", err)
+			return fmt.Errorf("failed to generate encoders: %w", err)
 		}
 	}
 
@@ -52,7 +50,7 @@ func (g Gen) WriteTupleEncodersToFile(fname, pkg string, types ...interface{}) e
 
 	fi, err := os.Create(fname)
 	if err != nil {
-		return xerrors.Errorf("failed to open file: %w", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 
 	_, err = fi.Write(data)
@@ -86,18 +84,18 @@ func (g Gen) WriteMapEncodersToFile(fname, pkg string, types ...interface{}) err
 	for i, t := range types {
 		gti, err := ParseTypeInfo(t)
 		if err != nil {
-			return xerrors.Errorf("failed to parse type info: %w", err)
+			return fmt.Errorf("failed to parse type info: %w", err)
 		}
 		typeInfos[i] = gti
 	}
 
 	if err := g.PrintHeaderAndUtilityMethods(buf, pkg, typeInfos); err != nil {
-		return xerrors.Errorf("failed to write header: %w", err)
+		return fmt.Errorf("failed to write header: %w", err)
 	}
 
 	for i, t := range typeInfos {
 		if err := g.GenMapEncodersForType(t, buf); err != nil {
-			return xerrors.Errorf("%T (%s) failed to generate encoders: %w", types[i], t.Name, err)
+			return fmt.Errorf("%T (%s) failed to generate encoders: %w", types[i], t.Name, err)
 		}
 	}
 
@@ -108,7 +106,7 @@ func (g Gen) WriteMapEncodersToFile(fname, pkg string, types ...interface{}) err
 
 	fi, err := os.Create(fname)
 	if err != nil {
-		return xerrors.Errorf("failed to open file: %w", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
 
 	_, err = fi.Write(data)
