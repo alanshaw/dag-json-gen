@@ -44,6 +44,9 @@ func parse(r io.Reader, w io.Writer) error {
 		if err := jr.ReadObjectOpen(); err != nil {
 			return err
 		}
+		if _, err := fmt.Fprintf(w, `{`); err != nil {
+			return err
+		}
 		for {
 			close, err := jr.PeekObjectClose()
 			if err != nil {
@@ -61,7 +64,7 @@ func parse(r io.Reader, w io.Writer) error {
 				if err := jr.ReadObjectColon(); err != nil {
 					return err
 				}
-				if _, err := fmt.Fprintf(w, `{"%s":`, k); err != nil {
+				if _, err := fmt.Fprintf(w, `"%s":`, k); err != nil {
 					return err
 				}
 				if err := parse(jr, w); err != nil {
