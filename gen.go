@@ -1,11 +1,12 @@
 package typegen
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/big"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -1616,19 +1617,8 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		return err
 	}
 
-	sort.Slice(gti.Fields, func(i, j int) bool {
-		fi := gti.Fields[i]
-		fj := gti.Fields[j]
-
-		if len(fi.MapKey) < len(fj.MapKey) {
-			return true
-		}
-		if len(fi.MapKey) > len(fj.MapKey) {
-			return false
-		}
-
-		// TODO: is this properly canonical?
-		return fi.MapKey < fj.MapKey
+	slices.SortFunc(gti.Fields, func(a, b Field) int {
+		return bytes.Compare([]byte(a.MapKey), []byte(b.MapKey))
 	})
 
 	if len(gti.Fields) > 1 {
@@ -1642,7 +1632,7 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			if f.OmitEmpty {
 				// write the comma if the current field is omitempty and not empty
 				if err := g.doTemplate(w, f, `
-				if t.{{.Name}} != {{ .EmptyVal }} {`); err != nil {
+				if t.{{ .Name }} != {{ .EmptyVal }} {`); err != nil {
 					return err
 				}
 			}
@@ -1665,7 +1655,7 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 		fmt.Fprintf(w, "\n\n\t// t.%s (%s) (%s)", f.Name, f.Type, f.Type.Kind())
 
 		if f.OmitEmpty {
-			if err := g.doTemplate(w, f, "\nif t.{{.Name}} != {{ .EmptyVal }} {"); err != nil {
+			if err := g.doTemplate(w, f, "\nif t.{{ .Name }} != {{ .EmptyVal }} {"); err != nil {
 				return err
 			}
 		}
