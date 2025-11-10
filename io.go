@@ -150,7 +150,7 @@ func (d *DagJsonReader) peekToken() (jsontokenizer.TokType, error) {
 // the next token is NOT the start of an object, array, number, string, boolean
 // or null.
 //
-// It returns either "object", "array", "string", "boolean" or "null".
+// It returns either "object", "array", "string", "number", "boolean" or "null".
 func (d *DagJsonReader) PeekType() (string, error) {
 	tok, err := d.peekToken()
 	if err != nil {
