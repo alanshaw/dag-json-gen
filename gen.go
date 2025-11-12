@@ -198,7 +198,7 @@ func (gti *GenTypeInfo) Imports() []Import {
 	for _, f := range gti.Fields {
 		switch f.Type.Kind() {
 		case reflect.Struct:
-			if f.Type == bigIntType {
+			if !f.Pointer && f.Type != bigIntType {
 				continue
 			}
 			if f.Type == cidType {
