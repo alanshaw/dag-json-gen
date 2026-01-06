@@ -2,6 +2,7 @@ package typegen
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -133,7 +134,11 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, `"%s"`, s); err != nil {
+		ms, err := json.Marshal(s)
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write(ms); err != nil {
 			return err
 		}
 	case "boolean":
