@@ -23,7 +23,7 @@ func (jt *DagJsonTime) UnmarshalDagJSON(r io.Reader) error {
 	jr := NewDagJsonReader(r)
 	nsecs, err := jr.ReadNumberAsInt64()
 	if err != nil {
-		return nil
+		return err
 	}
 	t := time.Unix(0, nsecs)
 	*jt = (DagJsonTime)(t)
