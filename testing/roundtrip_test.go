@@ -640,7 +640,7 @@ func TestConfigurability(t *testing.T) {
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "Slice value in field t.Arr was too long" {
+			} else if err.Error() != "slice value in field t.Arr was too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -660,7 +660,7 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "t.Arr: slice too large" {
+			} else if err.Error() != "reading array for field t.Arr: slice too large" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -679,7 +679,7 @@ func TestConfigurability(t *testing.T) {
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "Byte array in field t.Byts was too long" {
+			} else if err.Error() != "byte array in field t.Byts was too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -699,7 +699,7 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "t.Byts: byte array too large" {
+			} else if err.Error() != "reading bytes for field t.Byts: byte array too large" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -718,7 +718,7 @@ func TestConfigurability(t *testing.T) {
 			err := ls.MarshalDagJSON(new(bytes.Buffer))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "String in field t.Str was too long" {
+			} else if err.Error() != "string in field t.Str was too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})
@@ -738,7 +738,7 @@ func TestConfigurability(t *testing.T) {
 			err = ls.UnmarshalDagJSON(strings.NewReader(bad))
 			if err == nil {
 				t.Fatal("expected error")
-			} else if err.Error() != "t.Str: string too long" {
+			} else if err.Error() != "reading string for field t.Str: string too long" {
 				t.Fatal("unexpected error", err)
 			}
 		})

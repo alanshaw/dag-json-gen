@@ -25,35 +25,35 @@ func (t *SignedArray) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("SignedArray: %w", err)
+		return fmt.Errorf("writing array open for field SignedArray: %w", err)
 	}
 
 	// t.Signed ([]uint64) (slice)
 	if len(t.Signed) > 8192 {
-		return fmt.Errorf("Slice value in field t.Signed was too long")
+		return fmt.Errorf("slice value in field t.Signed was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Signed: %w", err)
+		return fmt.Errorf("writing array open for field t.Signed: %w", err)
 	}
 	for i, v := range t.Signed {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Signed: %w", err)
+				return fmt.Errorf("writing comma for field t.Signed: %w", err)
 			}
 		}
 
 		if err := jw.WriteUint64(uint64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing uint64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Signed: %w", err)
+		return fmt.Errorf("writing array close for field t.Signed: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("SignedArray: %w", err)
+		return fmt.Errorf("writing array close for field SignedArray: %w", err)
 	}
 	return nil
 }
@@ -68,15 +68,15 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("SignedArray: %w", err)
+		return fmt.Errorf("reading array open for field SignedArray: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("SignedArray: %w", err)
+		return fmt.Errorf("peeking array close for field SignedArray: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SignedArray: %w", err)
+			return fmt.Errorf("reading array close for field SignedArray: %w", err)
 		}
 	} else {
 
@@ -85,16 +85,16 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.Signed: %w", err)
+				return fmt.Errorf("reading array open for field t.Signed: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.Signed: %w", err)
+				return fmt.Errorf("peeking array close for field t.Signed: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.Signed: %w", err)
+					return fmt.Errorf("reading array close for field t.Signed: %w", err)
 				}
 
 			} else {
@@ -104,7 +104,7 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading uint64 for field item[0]: %w", err)
 						}
 						item[0] = uint64(nval)
 
@@ -113,20 +113,20 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.Signed: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.Signed: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.Signed: slice too large")
+						return fmt.Errorf("reading array for field t.Signed: slice too large")
 					}
 				}
 			}
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SignedArray: %w", err)
+			return fmt.Errorf("reading array close for field SignedArray: %w", err)
 		}
 	}
 	return nil
@@ -139,91 +139,91 @@ func (t *SimpleTypeOne) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("SimpleTypeOne: %w", err)
+		return fmt.Errorf("writing array open for field SimpleTypeOne: %w", err)
 	}
 
 	// t.Foo (string) (string)
 	if len(t.Foo) > 8192 {
-		return fmt.Errorf("String in field t.Foo was too long")
+		return fmt.Errorf("string in field t.Foo was too long")
 	}
 	if err := jw.WriteString(string(t.Foo)); err != nil {
-		return fmt.Errorf("t.Foo: %w", err)
+		return fmt.Errorf("writing string for field t.Foo: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Value: %w", err)
+		return fmt.Errorf("writing comma for field Value: %w", err)
 	}
 
 	// t.Value (uint64) (uint64)
 
 	if err := jw.WriteUint64(uint64(t.Value)); err != nil {
-		return fmt.Errorf("t.Value: %w", err)
+		return fmt.Errorf("writing uint64 for field t.Value: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Binary: %w", err)
+		return fmt.Errorf("writing comma for field Binary: %w", err)
 	}
 
 	// t.Binary ([]uint8) (slice)
 	if len(t.Binary) > 2097152 {
-		return fmt.Errorf("Byte array in field t.Binary was too long")
+		return fmt.Errorf("byte array in field t.Binary was too long")
 	}
 
 	if err := jw.WriteBytes(t.Binary); err != nil {
-		return fmt.Errorf("t.Binary: %w", err)
+		return fmt.Errorf("writing bytes for field t.Binary: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Signed: %w", err)
+		return fmt.Errorf("writing comma for field Signed: %w", err)
 	}
 
 	// t.Signed (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Signed)); err != nil {
-		return fmt.Errorf("t.Signed: %w", err)
+		return fmt.Errorf("writing int64 for field t.Signed: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("NString: %w", err)
+		return fmt.Errorf("writing comma for field NString: %w", err)
 	}
 
 	// t.NString (testing.NamedString) (string)
 	if len(t.NString) > 8192 {
-		return fmt.Errorf("String in field t.NString was too long")
+		return fmt.Errorf("string in field t.NString was too long")
 	}
 	if err := jw.WriteString(string(t.NString)); err != nil {
-		return fmt.Errorf("t.NString: %w", err)
+		return fmt.Errorf("writing string for field t.NString: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Strings: %w", err)
+		return fmt.Errorf("writing comma for field Strings: %w", err)
 	}
 
 	// t.Strings ([]string) (slice)
 	if len(t.Strings) > 8192 {
-		return fmt.Errorf("Slice value in field t.Strings was too long")
+		return fmt.Errorf("slice value in field t.Strings was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Strings: %w", err)
+		return fmt.Errorf("writing array open for field t.Strings: %w", err)
 	}
 	for i, v := range t.Strings {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Strings: %w", err)
+				return fmt.Errorf("writing comma for field t.Strings: %w", err)
 			}
 		}
 		if len(v) > 8192 {
-			return fmt.Errorf("String in field v was too long")
+			return fmt.Errorf("string in field v was too long")
 		}
 		if err := jw.WriteString(string(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing string for field v: %w", err)
 		}
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Strings: %w", err)
+		return fmt.Errorf("writing array close for field t.Strings: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("SimpleTypeOne: %w", err)
+		return fmt.Errorf("writing array close for field SimpleTypeOne: %w", err)
 	}
 	return nil
 }
@@ -238,15 +238,15 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("SimpleTypeOne: %w", err)
+		return fmt.Errorf("reading array open for field SimpleTypeOne: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("SimpleTypeOne: %w", err)
+		return fmt.Errorf("peeking array close for field SimpleTypeOne: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SimpleTypeOne: %w", err)
+			return fmt.Errorf("reading array close for field SimpleTypeOne: %w", err)
 		}
 	} else {
 
@@ -256,16 +256,16 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 			sval, err := jr.ReadString(8192)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.Foo: string too long")
+					return fmt.Errorf("reading string for field t.Foo: string too long")
 				}
-				return fmt.Errorf("t.Foo: %w", err)
+				return fmt.Errorf("reading string for field t.Foo: %w", err)
 			}
 			t.Foo = string(sval)
 		}
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeOne: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeOne: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 6")
@@ -278,7 +278,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return fmt.Errorf("t.Value: %w", err)
+				return fmt.Errorf("reading uint64 for field t.Value: %w", err)
 			}
 			t.Value = uint64(nval)
 
@@ -286,7 +286,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeOne: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeOne: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 6")
@@ -299,9 +299,9 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 			bval, err := jr.ReadBytes(2097152)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.Binary: byte array too large")
+					return fmt.Errorf("reading bytes for field t.Binary: byte array too large")
 				}
-				return fmt.Errorf("t.Binary: %w", err)
+				return fmt.Errorf("reading bytes for field t.Binary: %w", err)
 			}
 			if len(bval) > 0 {
 				t.Binary = []uint8(bval)
@@ -311,7 +311,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeOne: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeOne: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 3 < 6")
@@ -324,7 +324,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Signed: %w", err)
+				return fmt.Errorf("reading int64 for field t.Signed: %w", err)
 			}
 			t.Signed = int64(nval)
 
@@ -332,7 +332,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeOne: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeOne: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 4 < 6")
@@ -345,16 +345,16 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 			sval, err := jr.ReadString(8192)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.NString: string too long")
+					return fmt.Errorf("reading string for field t.NString: string too long")
 				}
-				return fmt.Errorf("t.NString: %w", err)
+				return fmt.Errorf("reading string for field t.NString: %w", err)
 			}
 			t.NString = NamedString(sval)
 		}
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeOne: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeOne: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 5 < 6")
@@ -366,16 +366,16 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.Strings: %w", err)
+				return fmt.Errorf("reading array open for field t.Strings: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.Strings: %w", err)
+				return fmt.Errorf("peeking array close for field t.Strings: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.Strings: %w", err)
+					return fmt.Errorf("reading array close for field t.Strings: %w", err)
 				}
 
 			} else {
@@ -385,9 +385,9 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 						sval, err := jr.ReadString(8192)
 						if err != nil {
 							if errors.Is(err, jsg.ErrLimitExceeded) {
-								return fmt.Errorf("item[0]: string too long")
+								return fmt.Errorf("reading string for field item[0]: string too long")
 							}
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading string for field item[0]: %w", err)
 						}
 						item[0] = string(sval)
 					}
@@ -395,20 +395,20 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.Strings: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.Strings: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.Strings: slice too large")
+						return fmt.Errorf("reading array for field t.Strings: slice too large")
 					}
 				}
 			}
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SimpleTypeOne: %w", err)
+			return fmt.Errorf("reading array close for field SimpleTypeOne: %w", err)
 		}
 	}
 	return nil
@@ -421,197 +421,197 @@ func (t *SimpleTypeTwo) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("SimpleTypeTwo: %w", err)
+		return fmt.Errorf("writing array open for field SimpleTypeTwo: %w", err)
 	}
 
 	// t.Stuff (testing.SimpleTypeTwo) (struct)
 	if err := t.Stuff.MarshalDagJSON(jw); err != nil {
-		return fmt.Errorf("t.Stuff: %w", err)
+		return fmt.Errorf("marshaling field t.Stuff: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Others: %w", err)
+		return fmt.Errorf("writing comma for field Others: %w", err)
 	}
 
 	// t.Others ([]uint64) (slice)
 	if len(t.Others) > 8192 {
-		return fmt.Errorf("Slice value in field t.Others was too long")
+		return fmt.Errorf("slice value in field t.Others was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Others: %w", err)
+		return fmt.Errorf("writing array open for field t.Others: %w", err)
 	}
 	for i, v := range t.Others {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Others: %w", err)
+				return fmt.Errorf("writing comma for field t.Others: %w", err)
 			}
 		}
 
 		if err := jw.WriteUint64(uint64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing uint64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Others: %w", err)
+		return fmt.Errorf("writing array close for field t.Others: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("SignedOthers: %w", err)
+		return fmt.Errorf("writing comma for field SignedOthers: %w", err)
 	}
 
 	// t.SignedOthers ([]int64) (slice)
 	if len(t.SignedOthers) > 8192 {
-		return fmt.Errorf("Slice value in field t.SignedOthers was too long")
+		return fmt.Errorf("slice value in field t.SignedOthers was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.SignedOthers: %w", err)
+		return fmt.Errorf("writing array open for field t.SignedOthers: %w", err)
 	}
 	for i, v := range t.SignedOthers {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.SignedOthers: %w", err)
+				return fmt.Errorf("writing comma for field t.SignedOthers: %w", err)
 			}
 		}
 
 		if err := jw.WriteInt64(int64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing int64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.SignedOthers: %w", err)
+		return fmt.Errorf("writing array close for field t.SignedOthers: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Test: %w", err)
+		return fmt.Errorf("writing comma for field Test: %w", err)
 	}
 
 	// t.Test ([][]uint8) (slice)
 	if len(t.Test) > 8192 {
-		return fmt.Errorf("Slice value in field t.Test was too long")
+		return fmt.Errorf("slice value in field t.Test was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Test: %w", err)
+		return fmt.Errorf("writing array open for field t.Test: %w", err)
 	}
 	for i, v := range t.Test {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Test: %w", err)
+				return fmt.Errorf("writing comma for field t.Test: %w", err)
 			}
 		}
 		if len(v) > 2097152 {
-			return fmt.Errorf("Byte array in field v was too long")
+			return fmt.Errorf("byte array in field v was too long")
 		}
 
 		if err := jw.WriteBytes(v); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing bytes for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Test: %w", err)
+		return fmt.Errorf("writing array close for field t.Test: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Dog: %w", err)
+		return fmt.Errorf("writing comma for field Dog: %w", err)
 	}
 
 	// t.Dog (string) (string)
 	if len(t.Dog) > 8192 {
-		return fmt.Errorf("String in field t.Dog was too long")
+		return fmt.Errorf("string in field t.Dog was too long")
 	}
 	if err := jw.WriteString(string(t.Dog)); err != nil {
-		return fmt.Errorf("t.Dog: %w", err)
+		return fmt.Errorf("writing string for field t.Dog: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Numbers: %w", err)
+		return fmt.Errorf("writing comma for field Numbers: %w", err)
 	}
 
 	// t.Numbers ([]testing.NamedNumber) (slice)
 	if len(t.Numbers) > 8192 {
-		return fmt.Errorf("Slice value in field t.Numbers was too long")
+		return fmt.Errorf("slice value in field t.Numbers was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Numbers: %w", err)
+		return fmt.Errorf("writing array open for field t.Numbers: %w", err)
 	}
 	for i, v := range t.Numbers {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Numbers: %w", err)
+				return fmt.Errorf("writing comma for field t.Numbers: %w", err)
 			}
 		}
 
 		if err := jw.WriteUint64(uint64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing uint64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Numbers: %w", err)
+		return fmt.Errorf("writing array close for field t.Numbers: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Pizza: %w", err)
+		return fmt.Errorf("writing comma for field Pizza: %w", err)
 	}
 
 	// t.Pizza (uint64) (uint64)
 
 	if t.Pizza == nil {
 		if err := jw.WriteNull(); err != nil {
-			return fmt.Errorf("t.Pizza: %w", err)
+			return fmt.Errorf("writing null for field t.Pizza: %w", err)
 		}
 	} else {
 		if err := jw.WriteUint64(uint64(*t.Pizza)); err != nil {
-			return fmt.Errorf("t.Pizza: %w", err)
+			return fmt.Errorf("writing uint64 for field t.Pizza: %w", err)
 		}
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("PointyPizza: %w", err)
+		return fmt.Errorf("writing comma for field PointyPizza: %w", err)
 	}
 
 	// t.PointyPizza (testing.NamedNumber) (uint64)
 
 	if t.PointyPizza == nil {
 		if err := jw.WriteNull(); err != nil {
-			return fmt.Errorf("t.PointyPizza: %w", err)
+			return fmt.Errorf("writing null for field t.PointyPizza: %w", err)
 		}
 	} else {
 		if err := jw.WriteUint64(uint64(*t.PointyPizza)); err != nil {
-			return fmt.Errorf("t.PointyPizza: %w", err)
+			return fmt.Errorf("writing uint64 for field t.PointyPizza: %w", err)
 		}
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Arrrrrghay: %w", err)
+		return fmt.Errorf("writing comma for field Arrrrrghay: %w", err)
 	}
 
 	// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 	if len(t.Arrrrrghay) > 8192 {
-		return fmt.Errorf("Slice value in field t.Arrrrrghay was too long")
+		return fmt.Errorf("slice value in field t.Arrrrrghay was too long")
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Arrrrrghay: %w", err)
+		return fmt.Errorf("writing array open for field t.Arrrrrghay: %w", err)
 	}
 	for i, v := range t.Arrrrrghay {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Arrrrrghay: %w", err)
+				return fmt.Errorf("writing comma for field t.Arrrrrghay: %w", err)
 			}
 		}
 		if err := v.MarshalDagJSON(jw); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("marshaling field v: %w", err)
 		}
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Arrrrrghay: %w", err)
+		return fmt.Errorf("writing array close for field t.Arrrrrghay: %w", err)
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("SimpleTypeTwo: %w", err)
+		return fmt.Errorf("writing array close for field SimpleTypeTwo: %w", err)
 	}
 	return nil
 }
@@ -626,15 +626,15 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("SimpleTypeTwo: %w", err)
+		return fmt.Errorf("reading array open for field SimpleTypeTwo: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("SimpleTypeTwo: %w", err)
+		return fmt.Errorf("peeking array close for field SimpleTypeTwo: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SimpleTypeTwo: %w", err)
+			return fmt.Errorf("reading array close for field SimpleTypeTwo: %w", err)
 		}
 	} else {
 
@@ -643,11 +643,11 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			null, err := jr.PeekNull()
 			if err != nil {
-				return fmt.Errorf("t.Stuff: %w", err)
+				return fmt.Errorf("peeking null for field t.Stuff: %w", err)
 			}
 			if null {
 				if err := jr.ReadNull(); err != nil {
-					return fmt.Errorf("t.Stuff: %w", err)
+					return fmt.Errorf("reading null for field t.Stuff: %w", err)
 				}
 			} else {
 				t.Stuff = new(SimpleTypeTwo)
@@ -660,7 +660,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 9")
@@ -672,16 +672,16 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.Others: %w", err)
+				return fmt.Errorf("reading array open for field t.Others: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.Others: %w", err)
+				return fmt.Errorf("peeking array close for field t.Others: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.Others: %w", err)
+					return fmt.Errorf("reading array close for field t.Others: %w", err)
 				}
 
 			} else {
@@ -691,7 +691,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading uint64 for field item[0]: %w", err)
 						}
 						item[0] = uint64(nval)
 
@@ -700,13 +700,13 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.Others: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.Others: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.Others: slice too large")
+						return fmt.Errorf("reading array for field t.Others: slice too large")
 					}
 				}
 			}
@@ -715,7 +715,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 9")
@@ -727,16 +727,16 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.SignedOthers: %w", err)
+				return fmt.Errorf("reading array open for field t.SignedOthers: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.SignedOthers: %w", err)
+				return fmt.Errorf("peeking array close for field t.SignedOthers: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.SignedOthers: %w", err)
+					return fmt.Errorf("reading array close for field t.SignedOthers: %w", err)
 				}
 
 			} else {
@@ -746,7 +746,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 						nval, err := jr.ReadNumberAsInt64()
 						if err != nil {
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading int64 for field item[0]: %w", err)
 						}
 						item[0] = int64(nval)
 
@@ -755,13 +755,13 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.SignedOthers: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.SignedOthers: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.SignedOthers: slice too large")
+						return fmt.Errorf("reading array for field t.SignedOthers: slice too large")
 					}
 				}
 			}
@@ -770,7 +770,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 3 < 9")
@@ -782,16 +782,16 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.Test: %w", err)
+				return fmt.Errorf("reading array open for field t.Test: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.Test: %w", err)
+				return fmt.Errorf("peeking array close for field t.Test: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.Test: %w", err)
+					return fmt.Errorf("reading array close for field t.Test: %w", err)
 				}
 
 			} else {
@@ -802,9 +802,9 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 						bval, err := jr.ReadBytes(2097152)
 						if err != nil {
 							if errors.Is(err, jsg.ErrLimitExceeded) {
-								return fmt.Errorf("item[0]: byte array too large")
+								return fmt.Errorf("reading bytes for field item[0]: byte array too large")
 							}
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading bytes for field item[0]: %w", err)
 						}
 						if len(bval) > 0 {
 							item[0] = []uint8(bval)
@@ -815,13 +815,13 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.Test: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.Test: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.Test: slice too large")
+						return fmt.Errorf("reading array for field t.Test: slice too large")
 					}
 				}
 			}
@@ -830,7 +830,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 4 < 9")
@@ -843,16 +843,16 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 			sval, err := jr.ReadString(8192)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.Dog: string too long")
+					return fmt.Errorf("reading string for field t.Dog: string too long")
 				}
-				return fmt.Errorf("t.Dog: %w", err)
+				return fmt.Errorf("reading string for field t.Dog: %w", err)
 			}
 			t.Dog = string(sval)
 		}
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 5 < 9")
@@ -864,16 +864,16 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 
 			if err := jr.ReadArrayOpen(); err != nil {
-				return fmt.Errorf("t.Numbers: %w", err)
+				return fmt.Errorf("reading array open for field t.Numbers: %w", err)
 			}
 
 			close, err := jr.PeekArrayClose()
 			if err != nil {
-				return fmt.Errorf("t.Numbers: %w", err)
+				return fmt.Errorf("peeking array close for field t.Numbers: %w", err)
 			}
 			if close {
 				if err := jr.ReadArrayClose(); err != nil {
-					return fmt.Errorf("t.Numbers: %w", err)
+					return fmt.Errorf("reading array close for field t.Numbers: %w", err)
 				}
 
 			} else {
@@ -883,7 +883,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 						nval, err := jr.ReadNumberAsUint64()
 						if err != nil {
-							return fmt.Errorf("item[0]: %w", err)
+							return fmt.Errorf("reading uint64 for field item[0]: %w", err)
 						}
 						item[0] = NamedNumber(nval)
 
@@ -892,13 +892,13 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					close, err := jr.ReadArrayCloseOrComma()
 					if err != nil {
-						return fmt.Errorf("t.Numbers: %w", err)
+						return fmt.Errorf("reading array close or comma for field t.Numbers: %w", err)
 					}
 					if close {
 						break
 					}
 					if i == 8192-1 {
-						return fmt.Errorf("t.Numbers: slice too large")
+						return fmt.Errorf("reading array for field t.Numbers: slice too large")
 					}
 				}
 			}
@@ -907,7 +907,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 6 < 9")
@@ -920,7 +920,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64OrNull()
 			if err != nil {
-				return fmt.Errorf("t.Pizza: %w", err)
+				return fmt.Errorf("reading uint64 or null for field t.Pizza: %w", err)
 			}
 			if nval != nil {
 				typed := uint64(*nval)
@@ -931,7 +931,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 7 < 9")
@@ -944,7 +944,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64OrNull()
 			if err != nil {
-				return fmt.Errorf("t.PointyPizza: %w", err)
+				return fmt.Errorf("reading uint64 or null for field t.PointyPizza: %w", err)
 			}
 			if nval != nil {
 				typed := NamedNumber(*nval)
@@ -955,7 +955,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("SimpleTypeTwo: %w", err)
+				return fmt.Errorf("reading array close or comma for field SimpleTypeTwo: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 8 < 9")
@@ -965,7 +965,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		// t.Arrrrrghay ([3]testing.SimpleTypeOne) (array)
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("t.Arrrrrghay: %w", err)
+			return fmt.Errorf("reading array open for field t.Arrrrrghay: %w", err)
 		}
 
 		t.Arrrrrghay = [3]SimpleTypeOne{}
@@ -977,17 +977,17 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("t.Arrrrrghay: %w", err)
+				return fmt.Errorf("reading array close or comma for field t.Arrrrrghay: %w", err)
 			}
 			if close {
 				break
 			}
 			if i == 8192-1 {
-				return fmt.Errorf("t.Arrrrrghay: array too large")
+				return fmt.Errorf("reading array for field t.Arrrrrghay: array too large")
 			}
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("SimpleTypeTwo: %w", err)
+			return fmt.Errorf("reading array close for field SimpleTypeTwo: %w", err)
 		}
 	}
 	return nil
@@ -1000,33 +1000,33 @@ func (t *DeferredContainer) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("DeferredContainer: %w", err)
+		return fmt.Errorf("writing array open for field DeferredContainer: %w", err)
 	}
 
 	// t.Stuff (testing.SimpleTypeOne) (struct)
 	if err := t.Stuff.MarshalDagJSON(jw); err != nil {
-		return fmt.Errorf("t.Stuff: %w", err)
+		return fmt.Errorf("marshaling field t.Stuff: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Deferred: %w", err)
+		return fmt.Errorf("writing comma for field Deferred: %w", err)
 	}
 
 	// t.Deferred (typegen.Deferred) (struct)
 	if err := t.Deferred.MarshalDagJSON(jw); err != nil {
-		return fmt.Errorf("t.Deferred: %w", err)
+		return fmt.Errorf("marshaling field t.Deferred: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Value: %w", err)
+		return fmt.Errorf("writing comma for field Value: %w", err)
 	}
 
 	// t.Value (uint64) (uint64)
 
 	if err := jw.WriteUint64(uint64(t.Value)); err != nil {
-		return fmt.Errorf("t.Value: %w", err)
+		return fmt.Errorf("writing uint64 for field t.Value: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("DeferredContainer: %w", err)
+		return fmt.Errorf("writing array close for field DeferredContainer: %w", err)
 	}
 	return nil
 }
@@ -1041,15 +1041,15 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("DeferredContainer: %w", err)
+		return fmt.Errorf("reading array open for field DeferredContainer: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("DeferredContainer: %w", err)
+		return fmt.Errorf("peeking array close for field DeferredContainer: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("DeferredContainer: %w", err)
+			return fmt.Errorf("reading array close for field DeferredContainer: %w", err)
 		}
 	} else {
 
@@ -1058,11 +1058,11 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			null, err := jr.PeekNull()
 			if err != nil {
-				return fmt.Errorf("t.Stuff: %w", err)
+				return fmt.Errorf("peeking null for field t.Stuff: %w", err)
 			}
 			if null {
 				if err := jr.ReadNull(); err != nil {
-					return fmt.Errorf("t.Stuff: %w", err)
+					return fmt.Errorf("reading null for field t.Stuff: %w", err)
 				}
 			} else {
 				t.Stuff = new(SimpleTypeOne)
@@ -1075,7 +1075,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("DeferredContainer: %w", err)
+				return fmt.Errorf("reading array close or comma for field DeferredContainer: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1092,7 +1092,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("DeferredContainer: %w", err)
+				return fmt.Errorf("reading array close or comma for field DeferredContainer: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1105,13 +1105,13 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return fmt.Errorf("t.Value: %w", err)
+				return fmt.Errorf("reading uint64 for field t.Value: %w", err)
 			}
 			t.Value = uint64(nval)
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("DeferredContainer: %w", err)
+			return fmt.Errorf("reading array close for field DeferredContainer: %w", err)
 		}
 	}
 	return nil
@@ -1124,55 +1124,55 @@ func (t *FixedArrays) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("FixedArrays: %w", err)
+		return fmt.Errorf("writing array open for field FixedArrays: %w", err)
 	}
 
 	// t.Bytes ([20]uint8) (array)
 	if len(t.Bytes) > 2097152 {
-		return fmt.Errorf("Byte array in field t.Bytes was too long")
+		return fmt.Errorf("byte array in field t.Bytes was too long")
 	}
 	if err := jw.WriteBytes(t.Bytes[:]); err != nil {
-		return fmt.Errorf("t.Bytes: %w", err)
+		return fmt.Errorf("writing bytes for field t.Bytes: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Uint8: %w", err)
+		return fmt.Errorf("writing comma for field Uint8: %w", err)
 	}
 
 	// t.Uint8 ([20]uint8) (array)
 	if len(t.Uint8) > 2097152 {
-		return fmt.Errorf("Byte array in field t.Uint8 was too long")
+		return fmt.Errorf("byte array in field t.Uint8 was too long")
 	}
 	if err := jw.WriteBytes(t.Uint8[:]); err != nil {
-		return fmt.Errorf("t.Uint8: %w", err)
+		return fmt.Errorf("writing bytes for field t.Uint8: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Uint64: %w", err)
+		return fmt.Errorf("writing comma for field Uint64: %w", err)
 	}
 
 	// t.Uint64 ([20]uint64) (array)
 	if len(t.Uint64) > 8192 {
-		return fmt.Errorf("Slice value in field t.Uint64 was too long")
+		return fmt.Errorf("slice value in field t.Uint64 was too long")
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Uint64: %w", err)
+		return fmt.Errorf("writing array open for field t.Uint64: %w", err)
 	}
 	for i, v := range t.Uint64 {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Uint64: %w", err)
+				return fmt.Errorf("writing comma for field t.Uint64: %w", err)
 			}
 		}
 
 		if err := jw.WriteUint64(uint64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing uint64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Uint64: %w", err)
+		return fmt.Errorf("writing array close for field t.Uint64: %w", err)
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("FixedArrays: %w", err)
+		return fmt.Errorf("writing array close for field FixedArrays: %w", err)
 	}
 	return nil
 }
@@ -1187,15 +1187,15 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("FixedArrays: %w", err)
+		return fmt.Errorf("reading array open for field FixedArrays: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("FixedArrays: %w", err)
+		return fmt.Errorf("peeking array close for field FixedArrays: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("FixedArrays: %w", err)
+			return fmt.Errorf("reading array close for field FixedArrays: %w", err)
 		}
 	} else {
 
@@ -1204,14 +1204,14 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			bval, err := jr.ReadBytes(2097152)
 			if err != nil {
-				return fmt.Errorf("t.Bytes: %w", err)
+				return fmt.Errorf("reading bytes for field t.Bytes: %w", err)
 			}
 			t.Bytes = [20]uint8(bval)
 		}
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("FixedArrays: %w", err)
+				return fmt.Errorf("reading array close or comma for field FixedArrays: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1223,14 +1223,14 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			bval, err := jr.ReadBytes(2097152)
 			if err != nil {
-				return fmt.Errorf("t.Uint8: %w", err)
+				return fmt.Errorf("reading bytes for field t.Uint8: %w", err)
 			}
 			t.Uint8 = [20]uint8(bval)
 		}
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("FixedArrays: %w", err)
+				return fmt.Errorf("reading array close or comma for field FixedArrays: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1240,7 +1240,7 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		// t.Uint64 ([20]uint64) (array)
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("t.Uint64: %w", err)
+			return fmt.Errorf("reading array open for field t.Uint64: %w", err)
 		}
 
 		t.Uint64 = [20]uint64{}
@@ -1249,24 +1249,24 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 
 				nval, err := jr.ReadNumberAsUint64()
 				if err != nil {
-					return fmt.Errorf("t.Uint64[i]: %w", err)
+					return fmt.Errorf("reading uint64 for field t.Uint64[i]: %w", err)
 				}
 				t.Uint64[i] = uint64(nval)
 
 			}
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("t.Uint64: %w", err)
+				return fmt.Errorf("reading array close or comma for field t.Uint64: %w", err)
 			}
 			if close {
 				break
 			}
 			if i == 8192-1 {
-				return fmt.Errorf("t.Uint64: array too large")
+				return fmt.Errorf("reading array for field t.Uint64: array too large")
 			}
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("FixedArrays: %w", err)
+			return fmt.Errorf("reading array close for field FixedArrays: %w", err)
 		}
 	}
 	return nil
@@ -1279,36 +1279,36 @@ func (t *ThingWithSomeTime) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("ThingWithSomeTime: %w", err)
+		return fmt.Errorf("writing array open for field ThingWithSomeTime: %w", err)
 	}
 
 	// t.When (typegen.DagJsonTime) (struct)
 	if err := t.When.MarshalDagJSON(jw); err != nil {
-		return fmt.Errorf("t.When: %w", err)
+		return fmt.Errorf("marshaling field t.When: %w", err)
 	}
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Stuff: %w", err)
+		return fmt.Errorf("writing comma for field Stuff: %w", err)
 	}
 
 	// t.Stuff (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Stuff)); err != nil {
-		return fmt.Errorf("t.Stuff: %w", err)
+		return fmt.Errorf("writing int64 for field t.Stuff: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("CatName: %w", err)
+		return fmt.Errorf("writing comma for field CatName: %w", err)
 	}
 
 	// t.CatName (string) (string)
 	if len(t.CatName) > 8192 {
-		return fmt.Errorf("String in field t.CatName was too long")
+		return fmt.Errorf("string in field t.CatName was too long")
 	}
 	if err := jw.WriteString(string(t.CatName)); err != nil {
-		return fmt.Errorf("t.CatName: %w", err)
+		return fmt.Errorf("writing string for field t.CatName: %w", err)
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("ThingWithSomeTime: %w", err)
+		return fmt.Errorf("writing array close for field ThingWithSomeTime: %w", err)
 	}
 	return nil
 }
@@ -1323,15 +1323,15 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("ThingWithSomeTime: %w", err)
+		return fmt.Errorf("reading array open for field ThingWithSomeTime: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("ThingWithSomeTime: %w", err)
+		return fmt.Errorf("peeking array close for field ThingWithSomeTime: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("ThingWithSomeTime: %w", err)
+			return fmt.Errorf("reading array close for field ThingWithSomeTime: %w", err)
 		}
 	} else {
 
@@ -1344,7 +1344,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("ThingWithSomeTime: %w", err)
+				return fmt.Errorf("reading array close or comma for field ThingWithSomeTime: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1357,7 +1357,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Stuff: %w", err)
+				return fmt.Errorf("reading int64 for field t.Stuff: %w", err)
 			}
 			t.Stuff = int64(nval)
 
@@ -1365,7 +1365,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("ThingWithSomeTime: %w", err)
+				return fmt.Errorf("reading array close or comma for field ThingWithSomeTime: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1378,14 +1378,14 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 			sval, err := jr.ReadString(8192)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.CatName: string too long")
+					return fmt.Errorf("reading string for field t.CatName: string too long")
 				}
-				return fmt.Errorf("t.CatName: %w", err)
+				return fmt.Errorf("reading string for field t.CatName: %w", err)
 			}
 			t.CatName = string(sval)
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("ThingWithSomeTime: %w", err)
+			return fmt.Errorf("reading array close for field ThingWithSomeTime: %w", err)
 		}
 	}
 	return nil
@@ -1398,20 +1398,20 @@ func (t *BigField) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("BigField: %w", err)
+		return fmt.Errorf("writing array open for field BigField: %w", err)
 	}
 
 	// t.LargeBytes ([]uint8) (slice)
 	if len(t.LargeBytes) > 10000000 {
-		return fmt.Errorf("Byte array in field t.LargeBytes was too long")
+		return fmt.Errorf("byte array in field t.LargeBytes was too long")
 	}
 
 	if err := jw.WriteBytes(t.LargeBytes); err != nil {
-		return fmt.Errorf("t.LargeBytes: %w", err)
+		return fmt.Errorf("writing bytes for field t.LargeBytes: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("BigField: %w", err)
+		return fmt.Errorf("writing array close for field BigField: %w", err)
 	}
 	return nil
 }
@@ -1426,15 +1426,15 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("BigField: %w", err)
+		return fmt.Errorf("reading array open for field BigField: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("BigField: %w", err)
+		return fmt.Errorf("peeking array close for field BigField: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("BigField: %w", err)
+			return fmt.Errorf("reading array close for field BigField: %w", err)
 		}
 	} else {
 
@@ -1444,9 +1444,9 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 			bval, err := jr.ReadBytes(10000000)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.LargeBytes: byte array too large")
+					return fmt.Errorf("reading bytes for field t.LargeBytes: byte array too large")
 				}
-				return fmt.Errorf("t.LargeBytes: %w", err)
+				return fmt.Errorf("reading bytes for field t.LargeBytes: %w", err)
 			}
 			if len(bval) > 0 {
 				t.LargeBytes = []uint8(bval)
@@ -1454,7 +1454,7 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("BigField: %w", err)
+			return fmt.Errorf("reading array close for field BigField: %w", err)
 		}
 	}
 	return nil
@@ -1465,26 +1465,26 @@ func (t *IntArray) MarshalDagJSON(w io.Writer) error {
 
 	// t.Ints ([]int64) (slice)
 	if len(t.Ints) > 8192 {
-		return fmt.Errorf("Slice value in field t.Ints was too long")
+		return fmt.Errorf("slice value in field t.Ints was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Ints: %w", err)
+		return fmt.Errorf("writing array open for field t.Ints: %w", err)
 	}
 	for i, v := range t.Ints {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Ints: %w", err)
+				return fmt.Errorf("writing comma for field t.Ints: %w", err)
 			}
 		}
 
 		if err := jw.WriteInt64(int64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing int64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Ints: %w", err)
+		return fmt.Errorf("writing array close for field t.Ints: %w", err)
 	}
 
 	return nil
@@ -1500,16 +1500,16 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("t.Ints: %w", err)
+			return fmt.Errorf("reading array open for field t.Ints: %w", err)
 		}
 
 		close, err := jr.PeekArrayClose()
 		if err != nil {
-			return fmt.Errorf("t.Ints: %w", err)
+			return fmt.Errorf("peeking array close for field t.Ints: %w", err)
 		}
 		if close {
 			if err := jr.ReadArrayClose(); err != nil {
-				return fmt.Errorf("t.Ints: %w", err)
+				return fmt.Errorf("reading array close for field t.Ints: %w", err)
 			}
 
 		} else {
@@ -1519,7 +1519,7 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					nval, err := jr.ReadNumberAsInt64()
 					if err != nil {
-						return fmt.Errorf("item[0]: %w", err)
+						return fmt.Errorf("reading int64 for field item[0]: %w", err)
 					}
 					item[0] = int64(nval)
 
@@ -1528,13 +1528,13 @@ func (t *IntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 				close, err := jr.ReadArrayCloseOrComma()
 				if err != nil {
-					return fmt.Errorf("t.Ints: %w", err)
+					return fmt.Errorf("reading array close or comma for field t.Ints: %w", err)
 				}
 				if close {
 					break
 				}
 				if i == 8192-1 {
-					return fmt.Errorf("t.Ints: slice too large")
+					return fmt.Errorf("reading array for field t.Ints: slice too large")
 				}
 			}
 		}
@@ -1548,26 +1548,26 @@ func (t *IntAliasArray) MarshalDagJSON(w io.Writer) error {
 
 	// t.Ints ([]testing.IntAlias) (slice)
 	if len(t.Ints) > 8192 {
-		return fmt.Errorf("Slice value in field t.Ints was too long")
+		return fmt.Errorf("slice value in field t.Ints was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("t.Ints: %w", err)
+		return fmt.Errorf("writing array open for field t.Ints: %w", err)
 	}
 	for i, v := range t.Ints {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("t.Ints: %w", err)
+				return fmt.Errorf("writing comma for field t.Ints: %w", err)
 			}
 		}
 
 		if err := jw.WriteInt64(int64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing int64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("t.Ints: %w", err)
+		return fmt.Errorf("writing array close for field t.Ints: %w", err)
 	}
 
 	return nil
@@ -1583,16 +1583,16 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("t.Ints: %w", err)
+			return fmt.Errorf("reading array open for field t.Ints: %w", err)
 		}
 
 		close, err := jr.PeekArrayClose()
 		if err != nil {
-			return fmt.Errorf("t.Ints: %w", err)
+			return fmt.Errorf("peeking array close for field t.Ints: %w", err)
 		}
 		if close {
 			if err := jr.ReadArrayClose(); err != nil {
-				return fmt.Errorf("t.Ints: %w", err)
+				return fmt.Errorf("reading array close for field t.Ints: %w", err)
 			}
 
 		} else {
@@ -1602,7 +1602,7 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					nval, err := jr.ReadNumberAsInt64()
 					if err != nil {
-						return fmt.Errorf("item[0]: %w", err)
+						return fmt.Errorf("reading int64 for field item[0]: %w", err)
 					}
 					item[0] = IntAlias(nval)
 
@@ -1611,13 +1611,13 @@ func (t *IntAliasArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 				close, err := jr.ReadArrayCloseOrComma()
 				if err != nil {
-					return fmt.Errorf("t.Ints: %w", err)
+					return fmt.Errorf("reading array close or comma for field t.Ints: %w", err)
 				}
 				if close {
 					break
 				}
 				if i == 8192-1 {
-					return fmt.Errorf("t.Ints: slice too large")
+					return fmt.Errorf("reading array for field t.Ints: slice too large")
 				}
 			}
 		}
@@ -1633,37 +1633,37 @@ func (t *TupleIntArray) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("TupleIntArray: %w", err)
+		return fmt.Errorf("writing array open for field TupleIntArray: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int1)); err != nil {
-		return fmt.Errorf("t.Int1: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int1: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int2: %w", err)
+		return fmt.Errorf("writing comma for field Int2: %w", err)
 	}
 
 	// t.Int2 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int2)); err != nil {
-		return fmt.Errorf("t.Int2: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int2: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int3: %w", err)
+		return fmt.Errorf("writing comma for field Int3: %w", err)
 	}
 
 	// t.Int3 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int3)); err != nil {
-		return fmt.Errorf("t.Int3: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int3: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("TupleIntArray: %w", err)
+		return fmt.Errorf("writing array close for field TupleIntArray: %w", err)
 	}
 	return nil
 }
@@ -1678,15 +1678,15 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("TupleIntArray: %w", err)
+		return fmt.Errorf("reading array open for field TupleIntArray: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("TupleIntArray: %w", err)
+		return fmt.Errorf("peeking array close for field TupleIntArray: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleIntArray: %w", err)
+			return fmt.Errorf("reading array close for field TupleIntArray: %w", err)
 		}
 	} else {
 
@@ -1696,7 +1696,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int1: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int1: %w", err)
 			}
 			t.Int1 = int64(nval)
 
@@ -1704,7 +1704,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleIntArray: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleIntArray: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 3")
@@ -1717,7 +1717,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int2: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int2: %w", err)
 			}
 			t.Int2 = int64(nval)
 
@@ -1725,7 +1725,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleIntArray: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleIntArray: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 3")
@@ -1738,13 +1738,13 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int3: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int3: %w", err)
 			}
 			t.Int3 = int64(nval)
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleIntArray: %w", err)
+			return fmt.Errorf("reading array close for field TupleIntArray: %w", err)
 		}
 	}
 	return nil
@@ -1757,59 +1757,59 @@ func (t *TupleIntArrayOptionals) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+		return fmt.Errorf("writing array open for field TupleIntArrayOptionals: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
 
 	if t.Int1 == nil {
 		if err := jw.WriteNull(); err != nil {
-			return fmt.Errorf("t.Int1: %w", err)
+			return fmt.Errorf("writing null for field t.Int1: %w", err)
 		}
 	} else {
 		if err := jw.WriteInt64(int64(*t.Int1)); err != nil {
-			return fmt.Errorf("t.Int1: %w", err)
+			return fmt.Errorf("writing int64 for field t.Int1: %w", err)
 		}
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int2: %w", err)
+		return fmt.Errorf("writing comma for field Int2: %w", err)
 	}
 
 	// t.Int2 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int2)); err != nil {
-		return fmt.Errorf("t.Int2: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int2: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int3: %w", err)
+		return fmt.Errorf("writing comma for field Int3: %w", err)
 	}
 
 	// t.Int3 (uint64) (uint64)
 
 	if err := jw.WriteUint64(uint64(t.Int3)); err != nil {
-		return fmt.Errorf("t.Int3: %w", err)
+		return fmt.Errorf("writing uint64 for field t.Int3: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int4: %w", err)
+		return fmt.Errorf("writing comma for field Int4: %w", err)
 	}
 
 	// t.Int4 (uint64) (uint64)
 
 	if t.Int4 == nil {
 		if err := jw.WriteNull(); err != nil {
-			return fmt.Errorf("t.Int4: %w", err)
+			return fmt.Errorf("writing null for field t.Int4: %w", err)
 		}
 	} else {
 		if err := jw.WriteUint64(uint64(*t.Int4)); err != nil {
-			return fmt.Errorf("t.Int4: %w", err)
+			return fmt.Errorf("writing uint64 for field t.Int4: %w", err)
 		}
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+		return fmt.Errorf("writing array close for field TupleIntArrayOptionals: %w", err)
 	}
 	return nil
 }
@@ -1824,15 +1824,15 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+		return fmt.Errorf("reading array open for field TupleIntArrayOptionals: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+		return fmt.Errorf("peeking array close for field TupleIntArrayOptionals: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+			return fmt.Errorf("reading array close for field TupleIntArrayOptionals: %w", err)
 		}
 	} else {
 
@@ -1842,7 +1842,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64OrNull()
 			if err != nil {
-				return fmt.Errorf("t.Int1: %w", err)
+				return fmt.Errorf("reading int64 or null for field t.Int1: %w", err)
 			}
 			if nval != nil {
 				typed := int64(*nval)
@@ -1853,7 +1853,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleIntArrayOptionals: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 4")
@@ -1866,7 +1866,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int2: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int2: %w", err)
 			}
 			t.Int2 = int64(nval)
 
@@ -1874,7 +1874,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleIntArrayOptionals: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 2 < 4")
@@ -1887,7 +1887,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return fmt.Errorf("t.Int3: %w", err)
+				return fmt.Errorf("reading uint64 for field t.Int3: %w", err)
 			}
 			t.Int3 = uint64(nval)
 
@@ -1895,7 +1895,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleIntArrayOptionals: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 3 < 4")
@@ -1908,7 +1908,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64OrNull()
 			if err != nil {
-				return fmt.Errorf("t.Int4: %w", err)
+				return fmt.Errorf("reading uint64 or null for field t.Int4: %w", err)
 			}
 			if nval != nil {
 				typed := uint64(*nval)
@@ -1917,7 +1917,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleIntArrayOptionals: %w", err)
+			return fmt.Errorf("reading array close for field TupleIntArrayOptionals: %w", err)
 		}
 	}
 	return nil
@@ -1928,26 +1928,26 @@ func (t *IntArrayNewType) MarshalDagJSON(w io.Writer) error {
 
 	// (*t) (testing.IntArrayNewType) (slice)
 	if len((*t)) > 8192 {
-		return fmt.Errorf("Slice value in field (*t) was too long")
+		return fmt.Errorf("slice value in field (*t) was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("writing array open for field (*t): %w", err)
 	}
 	for i, v := range *t {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("writing comma for field (*t): %w", err)
 			}
 		}
 
 		if err := jw.WriteInt64(int64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing int64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("writing array close for field (*t): %w", err)
 	}
 
 	return nil
@@ -1963,16 +1963,16 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("reading array open for field (*t): %w", err)
 		}
 
 		close, err := jr.PeekArrayClose()
 		if err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("peeking array close for field (*t): %w", err)
 		}
 		if close {
 			if err := jr.ReadArrayClose(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("reading array close for field (*t): %w", err)
 			}
 
 		} else {
@@ -1982,7 +1982,7 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					nval, err := jr.ReadNumberAsInt64()
 					if err != nil {
-						return fmt.Errorf("item[0]: %w", err)
+						return fmt.Errorf("reading int64 for field item[0]: %w", err)
 					}
 					item[0] = int64(nval)
 
@@ -1991,13 +1991,13 @@ func (t *IntArrayNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 
 				close, err := jr.ReadArrayCloseOrComma()
 				if err != nil {
-					return fmt.Errorf("(*t): %w", err)
+					return fmt.Errorf("reading array close or comma for field (*t): %w", err)
 				}
 				if close {
 					break
 				}
 				if i == 8192-1 {
-					return fmt.Errorf("(*t): slice too large")
+					return fmt.Errorf("reading array for field (*t): slice too large")
 				}
 			}
 		}
@@ -2011,26 +2011,26 @@ func (t *IntArrayAliasNewType) MarshalDagJSON(w io.Writer) error {
 
 	// (*t) (testing.IntArrayAliasNewType) (slice)
 	if len((*t)) > 8192 {
-		return fmt.Errorf("Slice value in field (*t) was too long")
+		return fmt.Errorf("slice value in field (*t) was too long")
 	}
 
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("writing array open for field (*t): %w", err)
 	}
 	for i, v := range *t {
 		if i > 0 {
 			if err := jw.WriteComma(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("writing comma for field (*t): %w", err)
 			}
 		}
 
 		if err := jw.WriteInt64(int64(v)); err != nil {
-			return fmt.Errorf("v: %w", err)
+			return fmt.Errorf("writing int64 for field v: %w", err)
 		}
 
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("writing array close for field (*t): %w", err)
 	}
 
 	return nil
@@ -2046,16 +2046,16 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 	{
 
 		if err := jr.ReadArrayOpen(); err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("reading array open for field (*t): %w", err)
 		}
 
 		close, err := jr.PeekArrayClose()
 		if err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("peeking array close for field (*t): %w", err)
 		}
 		if close {
 			if err := jr.ReadArrayClose(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("reading array close for field (*t): %w", err)
 			}
 
 		} else {
@@ -2065,7 +2065,7 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 
 					nval, err := jr.ReadNumberAsInt64()
 					if err != nil {
-						return fmt.Errorf("item[0]: %w", err)
+						return fmt.Errorf("reading int64 for field item[0]: %w", err)
 					}
 					item[0] = IntAlias(nval)
 
@@ -2074,13 +2074,13 @@ func (t *IntArrayAliasNewType) UnmarshalDagJSON(r io.Reader) (err error) {
 
 				close, err := jr.ReadArrayCloseOrComma()
 				if err != nil {
-					return fmt.Errorf("(*t): %w", err)
+					return fmt.Errorf("reading array close or comma for field (*t): %w", err)
 				}
 				if close {
 					break
 				}
 				if i == 8192-1 {
-					return fmt.Errorf("(*t): slice too large")
+					return fmt.Errorf("reading array for field (*t): slice too large")
 				}
 			}
 		}
@@ -2099,7 +2099,7 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 		}
 
 		if err := jw.WriteObjectOpen(); err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("writing object open for field (*t): %w", err)
 		}
 
 		keys := make([]string, 0, len((*t)))
@@ -2110,29 +2110,29 @@ func (t *MapTransparentType) MarshalDagJSON(w io.Writer) error {
 		for i, k := range keys {
 			if i > 0 {
 				if err := jw.WriteComma(); err != nil {
-					return fmt.Errorf("(*t): %w", err)
+					return fmt.Errorf("writing comma for field (*t): %w", err)
 				}
 			}
 			v := (*t)[k]
 			if len(k) > 8192 {
-				return fmt.Errorf("String in field k was too long")
+				return fmt.Errorf("string in field k was too long")
 			}
 			if err := jw.WriteString(string(k)); err != nil {
-				return fmt.Errorf("k: %w", err)
+				return fmt.Errorf("writing string for field k: %w", err)
 			}
 			if err := jw.WriteObjectColon(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("writing colon for field (*t): %w", err)
 			}
 
 			if len(v) > 8192 {
-				return fmt.Errorf("String in field v was too long")
+				return fmt.Errorf("string in field v was too long")
 			}
 			if err := jw.WriteString(string(v)); err != nil {
-				return fmt.Errorf("v: %w", err)
+				return fmt.Errorf("writing string for field v: %w", err)
 			}
 		}
 		if err := jw.WriteObjectClose(); err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("writing object close for field (*t): %w", err)
 		}
 	}
 
@@ -2147,18 +2147,18 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 	// (*t) (testing.MapTransparentType) (map)
 
 	if err := jr.ReadObjectOpen(); err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("reading object open for field (*t): %w", err)
 	}
 
 	(*t) = map[string]string{}
 
 	close, err := jr.PeekObjectClose()
 	if err != nil {
-		return fmt.Errorf("(*t): %w", err)
+		return fmt.Errorf("peeking object close for field (*t): %w", err)
 	}
 	if close {
 		if err := jr.ReadObjectClose(); err != nil {
-			return fmt.Errorf("(*t): %w", err)
+			return fmt.Errorf("reading object close for field (*t): %w", err)
 		}
 	} else {
 		for i, l := 0, 8192; i < l; i++ {
@@ -2167,30 +2167,30 @@ func (t *MapTransparentType) UnmarshalDagJSON(r io.Reader) (err error) {
 				sval, err := jr.ReadString(8192)
 				if err != nil {
 					if errors.Is(err, jsg.ErrLimitExceeded) {
-						return fmt.Errorf("k: string too long")
+						return fmt.Errorf("reading string for field k: string too long")
 					}
-					return fmt.Errorf("k: %w", err)
+					return fmt.Errorf("reading string for field k: %w", err)
 				}
 				k = string(sval)
 			}
 			if err := jr.ReadObjectColon(); err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("reading object colon for field (*t): %w", err)
 			}
 			var v string
 			{
 				sval, err := jr.ReadString(8192)
 				if err != nil {
 					if errors.Is(err, jsg.ErrLimitExceeded) {
-						return fmt.Errorf("v: string too long")
+						return fmt.Errorf("reading string for field v: string too long")
 					}
-					return fmt.Errorf("v: %w", err)
+					return fmt.Errorf("reading string for field v: %w", err)
 				}
 				v = string(sval)
 			}
 			(*t)[k] = v
 			close, err := jr.ReadObjectCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("(*t): %w", err)
+				return fmt.Errorf("reading object close or comma for field (*t): %w", err)
 			}
 			if close {
 				break
@@ -2207,24 +2207,24 @@ func (t *BigIntContainer) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("BigIntContainer: %w", err)
+		return fmt.Errorf("writing array open for field BigIntContainer: %w", err)
 	}
 
 	// t.Int (big.Int) (struct)
 	if t.Int != nil && t.Int.Sign() < 0 {
-		return fmt.Errorf("Value in field t.Int was a negative big-integer (not supported)")
+		return fmt.Errorf("value in field t.Int was a negative big-integer (not supported)")
 	}
 	if t.Int == nil {
 		if err := jw.WriteUint8(0); err != nil {
-			return fmt.Errorf("t.Int: %w", err)
+			return fmt.Errorf("writing uint8 for field t.Int: %w", err)
 		}
 	} else {
 		if err := jw.WriteBigInt(t.Int); err != nil {
-			return fmt.Errorf("t.Int: %w", err)
+			return fmt.Errorf("writing bigint for field t.Int: %w", err)
 		}
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("BigIntContainer: %w", err)
+		return fmt.Errorf("writing array close for field BigIntContainer: %w", err)
 	}
 	return nil
 }
@@ -2239,15 +2239,15 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("BigIntContainer: %w", err)
+		return fmt.Errorf("reading array open for field BigIntContainer: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("BigIntContainer: %w", err)
+		return fmt.Errorf("peeking array close for field BigIntContainer: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("BigIntContainer: %w", err)
+			return fmt.Errorf("reading array close for field BigIntContainer: %w", err)
 		}
 	} else {
 
@@ -2257,14 +2257,14 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 			nval, err := jr.ReadNumberAsBigInt(256)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.Int: number too large")
+					return fmt.Errorf("reading number as bigint for field t.Int: number too large")
 				}
-				return fmt.Errorf("t.Int: %w", err)
+				return fmt.Errorf("reading number as bigint for field t.Int: %w", err)
 			}
 			t.Int = nval
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("BigIntContainer: %w", err)
+			return fmt.Errorf("reading array close for field BigIntContainer: %w", err)
 		}
 	}
 	return nil
@@ -2277,47 +2277,47 @@ func (t *TupleWithOptionalFields) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		return fmt.Errorf("writing array open for field TupleWithOptionalFields: %w", err)
 	}
 
 	// t.Int1 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int1)); err != nil {
-		return fmt.Errorf("t.Int1: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int1: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Uint2: %w", err)
+		return fmt.Errorf("writing comma for field Uint2: %w", err)
 	}
 
 	// t.Uint2 (uint64) (uint64)
 
 	if err := jw.WriteUint64(uint64(t.Uint2)); err != nil {
-		return fmt.Errorf("t.Uint2: %w", err)
+		return fmt.Errorf("writing uint64 for field t.Uint2: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int3: %w", err)
+		return fmt.Errorf("writing comma for field Int3: %w", err)
 	}
 
 	// t.Int3 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int3)); err != nil {
-		return fmt.Errorf("t.Int3: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int3: %w", err)
 	}
 
 	if err := jw.WriteComma(); err != nil {
-		return fmt.Errorf("Int4: %w", err)
+		return fmt.Errorf("writing comma for field Int4: %w", err)
 	}
 
 	// t.Int4 (int64) (int64)
 
 	if err := jw.WriteInt64(int64(t.Int4)); err != nil {
-		return fmt.Errorf("t.Int4: %w", err)
+		return fmt.Errorf("writing int64 for field t.Int4: %w", err)
 	}
 
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		return fmt.Errorf("writing array close for field TupleWithOptionalFields: %w", err)
 	}
 	return nil
 }
@@ -2332,15 +2332,15 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		return fmt.Errorf("reading array open for field TupleWithOptionalFields: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("TupleWithOptionalFields: %w", err)
+		return fmt.Errorf("peeking array close for field TupleWithOptionalFields: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleWithOptionalFields: %w", err)
+			return fmt.Errorf("reading array close for field TupleWithOptionalFields: %w", err)
 		}
 	} else {
 
@@ -2350,7 +2350,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int1: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int1: %w", err)
 			}
 			t.Int1 = int64(nval)
 
@@ -2358,7 +2358,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleWithOptionalFields: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleWithOptionalFields: %w", err)
 			}
 			if close {
 				return fmt.Errorf("json input has too few fields 1 < 2")
@@ -2371,7 +2371,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsUint64()
 			if err != nil {
-				return fmt.Errorf("t.Uint2: %w", err)
+				return fmt.Errorf("reading uint64 for field t.Uint2: %w", err)
 			}
 			t.Uint2 = uint64(nval)
 
@@ -2379,7 +2379,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleWithOptionalFields: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleWithOptionalFields: %w", err)
 			}
 			if close {
 				return nil
@@ -2392,7 +2392,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int3: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int3: %w", err)
 			}
 			t.Int3 = int64(nval)
 
@@ -2400,7 +2400,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		{
 			close, err := jr.ReadArrayCloseOrComma()
 			if err != nil {
-				return fmt.Errorf("TupleWithOptionalFields: %w", err)
+				return fmt.Errorf("reading array close or comma for field TupleWithOptionalFields: %w", err)
 			}
 			if close {
 				return nil
@@ -2413,13 +2413,13 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 
 			nval, err := jr.ReadNumberAsInt64()
 			if err != nil {
-				return fmt.Errorf("t.Int4: %w", err)
+				return fmt.Errorf("reading int64 for field t.Int4: %w", err)
 			}
 			t.Int4 = int64(nval)
 
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("TupleWithOptionalFields: %w", err)
+			return fmt.Errorf("reading array close for field TupleWithOptionalFields: %w", err)
 		}
 	}
 	return nil

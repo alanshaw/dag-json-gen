@@ -25,18 +25,18 @@ func (t *LongString) MarshalDagJSON(w io.Writer) error {
 		return err
 	}
 	if err := jw.WriteArrayOpen(); err != nil {
-		return fmt.Errorf("LongString: %w", err)
+		return fmt.Errorf("writing array open for field LongString: %w", err)
 	}
 
 	// t.Val (string) (string)
 	if len(t.Val) > 10000 {
-		return fmt.Errorf("String in field t.Val was too long")
+		return fmt.Errorf("string in field t.Val was too long")
 	}
 	if err := jw.WriteString(string(t.Val)); err != nil {
-		return fmt.Errorf("t.Val: %w", err)
+		return fmt.Errorf("writing string for field t.Val: %w", err)
 	}
 	if err := jw.WriteArrayClose(); err != nil {
-		return fmt.Errorf("LongString: %w", err)
+		return fmt.Errorf("writing array close for field LongString: %w", err)
 	}
 	return nil
 }
@@ -51,15 +51,15 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 	}()
 	if err := jr.ReadArrayOpen(); err != nil {
-		return fmt.Errorf("LongString: %w", err)
+		return fmt.Errorf("reading array open for field LongString: %w", err)
 	}
 	close, err := jr.PeekArrayClose()
 	if err != nil {
-		return fmt.Errorf("LongString: %w", err)
+		return fmt.Errorf("peeking array close for field LongString: %w", err)
 	}
 	if close {
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("LongString: %w", err)
+			return fmt.Errorf("reading array close for field LongString: %w", err)
 		}
 	} else {
 
@@ -69,14 +69,14 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 			sval, err := jr.ReadString(10000)
 			if err != nil {
 				if errors.Is(err, jsg.ErrLimitExceeded) {
-					return fmt.Errorf("t.Val: string too long")
+					return fmt.Errorf("reading string for field t.Val: string too long")
 				}
-				return fmt.Errorf("t.Val: %w", err)
+				return fmt.Errorf("reading string for field t.Val: %w", err)
 			}
 			t.Val = string(sval)
 		}
 		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("LongString: %w", err)
+			return fmt.Errorf("reading array close for field LongString: %w", err)
 		}
 	}
 	return nil
