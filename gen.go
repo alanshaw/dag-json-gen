@@ -198,7 +198,10 @@ func (gti *GenTypeInfo) Imports() []Import {
 	for _, f := range gti.Fields {
 		switch f.Type.Kind() {
 		case reflect.Struct:
-			if !f.Pointer && f.Type != bigIntType {
+			if !f.Pointer {
+				continue
+			}
+			if f.Type == bigIntType {
 				continue
 			}
 			if f.Type == cidType {
@@ -422,9 +425,6 @@ func (g Gen) emitDagJsonMarshalStructField(w io.Writer, f Field) error {
 	switch f.Type {
 	case bigIntType:
 		return g.doTemplate(w, f, `
-		if {{ .Name }} != nil && {{ .Name }}.Sign() < 0 {
-			return fmt.Errorf("value in field {{ .Name | js }} was a negative big-integer (not supported)")
-		}
 		if {{ .Name }} == nil {
 			if err := jw.WriteUint8(0); err != nil {
 				return fmt.Errorf("writing uint8 for field {{ .Name | js }}: %w", err)
@@ -434,7 +434,6 @@ func (g Gen) emitDagJsonMarshalStructField(w io.Writer, f Field) error {
 				return fmt.Errorf("writing bigint for field {{ .Name | js }}: %w", err)
 			}
 		}`)
-
 	case cidType:
 		return g.doTemplate(w, f, `
 		{{ if .Pointer }}
