@@ -2211,9 +2211,6 @@ func (t *BigIntContainer) MarshalDagJSON(w io.Writer) error {
 	}
 
 	// t.Int (big.Int) (struct)
-	if t.Int != nil && t.Int.Sign() < 0 {
-		return fmt.Errorf("value in field t.Int was a negative big-integer (not supported)")
-	}
 	if t.Int == nil {
 		if err := jw.WriteUint8(0); err != nil {
 			return fmt.Errorf("writing uint8 for field t.Int: %w", err)

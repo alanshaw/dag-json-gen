@@ -58,10 +58,19 @@ func TestLongStrings(t *testing.T) {
 }
 
 func TestBigInt(t *testing.T) {
+	bigPos, _ := new(big.Int).SetString("123456789012345678901234567890", 10)
+	bigNeg := new(big.Int).Neg(bigPos)
+
 	for _, v := range []BigIntContainer{
 		{Int: big.NewInt(100)},
 		{Int: big.NewInt(0)},
 		{Int: nil},
+		// negative values
+		{Int: big.NewInt(-1)},
+		{Int: big.NewInt(-100)},
+		{Int: big.NewInt(-256)},
+		{Int: bigPos},
+		{Int: bigNeg},
 	} {
 
 		var buf bytes.Buffer
@@ -78,14 +87,33 @@ func TestBigInt(t *testing.T) {
 				t.Fatal("expected nil to serialize to 0")
 			}
 		} else if v.Int.Cmp(o.Int) != 0 {
-			t.Fatal("did not round-trip")
+			t.Fatalf("did not round-trip: got %s want %s", o.Int, v.Int)
 		}
 	}
-	var buf bytes.Buffer
-	v := BigIntContainer{Int: big.NewInt(-1)}
-	err := v.MarshalDagJSON(&buf)
-	if err == nil {
-		t.Fatal("marshalling a negative int should have failed")
+}
+
+// TestBigIntGolden pins the JSON wire form of a few representative values so
+// the encoding can't drift unnoticed.
+func TestBigIntGolden(t *testing.T) {
+	cases := []struct {
+		val    int64
+		golden []byte // the encoded big.Int field (the array header is omitted)
+	}{
+		{0, []byte("[0]")},
+		{100, []byte("[100]")},
+		{-1, []byte("[-1]")},
+		{-256, []byte("[-256]")},
+	}
+
+	for _, tc := range cases {
+		var buf bytes.Buffer
+		v := BigIntContainer{Int: big.NewInt(tc.val)}
+		if err := v.MarshalDagJSON(&buf); err != nil {
+			t.Fatalf("marshal %d: %v", tc.val, err)
+		}
+		if !bytes.Equal(buf.Bytes(), tc.golden) {
+			t.Fatalf("%d: encoding mismatch: got %s want %s", tc.val, buf.Bytes(), tc.golden)
+		}
 	}
 }
 
