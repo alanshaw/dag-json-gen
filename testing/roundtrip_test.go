@@ -188,6 +188,59 @@ func testTypeRoundtrips(t *testing.T, typ reflect.Type) {
 	}
 }
 
+// eofTogetherReader hands out at most len(p) bytes per Read and, on the call
+// that returns the final bytes, returns them together with io.EOF — the legal
+// io.Reader behavior that net/http/httptest response bodies exhibit. A reader
+// like this previously broke UnmarshalDagJSON because the underlying tokenizer
+// dropped the chunk that arrived alongside EOF.
+type eofTogetherReader struct{ data []byte }
+
+func (r *eofTogetherReader) Read(p []byte) (int, error) {
+	n := copy(p, r.data)
+	r.data = r.data[n:]
+	if len(r.data) == 0 {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+func TestUnmarshalReaderReturningEOFWithData(t *testing.T) {
+	// A payload comfortably larger than the tokenizer's 64-byte buffer, so a
+	// refill lands on the final chunk and that chunk arrives with io.EOF.
+	dog := "the quick brown fox jumps over the lazy dog and keeps on running"
+	pizza := uint64(42)
+	orig := &SimpleTypeTwo{
+		Others:       []uint64{1, 2, 3, 4, 5},
+		SignedOthers: []int64{-1, -2, -3},
+		Test:         [][]byte{[]byte("alpha"), []byte("bravo")},
+		Dog:          dog,
+		Numbers:      []NamedNumber{7, 8, 9},
+		Pizza:        &pizza,
+	}
+
+	var buf bytes.Buffer
+	if err := orig.MarshalDagJSON(&buf); err != nil {
+		t.Fatal("marshal:", err)
+	}
+	if buf.Len() <= 64 {
+		t.Fatalf("payload too small to exercise refill: %d bytes", buf.Len())
+	}
+
+	var got SimpleTypeTwo
+	if err := got.UnmarshalDagJSON(&eofTogetherReader{data: buf.Bytes()}); err != nil {
+		t.Fatalf("unmarshal from (n>0, io.EOF) reader: %v", err)
+	}
+
+	// Re-marshal and compare bytes for an exact round-trip.
+	var rebuf bytes.Buffer
+	if err := got.MarshalDagJSON(&rebuf); err != nil {
+		t.Fatal("re-marshal:", err)
+	}
+	if !bytes.Equal(rebuf.Bytes(), buf.Bytes()) {
+		t.Fatalf("round trip mismatch:\n got: %s\nwant: %s", rebuf.String(), buf.String())
+	}
+}
+
 func TestDeferredContainer(t *testing.T) {
 	zero := &DeferredContainer{}
 	recepticle := &DeferredContainer{}
