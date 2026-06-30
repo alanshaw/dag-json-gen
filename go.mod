@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/ipfs/go-cid v0.5.0
-	pitr.ca/jsontokenizer v0.3.0
+	pitr.ca/jsontokenizer v0.3.2
 )
 
 require (

@@ -122,33 +122,7 @@ func NewDagJsonReader(r io.Reader) *DagJsonReader {
 	if jr, ok := r.(*DagJsonReader); ok {
 		return jr
 	}
-	r = &eofDeferReader{r: r}
 	return &DagJsonReader{r, jsontokenizer.New(r), -1}
-}
-
-// eofDeferReader holds back an io.EOF that arrives alongside data. The
-// jsontokenizer this package wraps drops the final chunk when a single Read
-// returns (n>0, io.EOF) together — which is legal per the io.Reader contract and
-// is what net/http/httptest response bodies do. Splitting that into (n>0, nil)
-// followed by (0, io.EOF) sidesteps the bug for any reader. Well-behaved readers
-// (bytes.Reader, real net/http) never hit this path, so it is transparent.
-type eofDeferReader struct {
-	r       io.Reader
-	pending error
-}
-
-func (e *eofDeferReader) Read(p []byte) (int, error) {
-	if e.pending != nil {
-		err := e.pending
-		e.pending = nil
-		return 0, err
-	}
-	n, err := e.r.Read(p)
-	if n > 0 && err != nil {
-		e.pending = err
-		return n, nil
-	}
-	return n, err
 }
 
 func (d *DagJsonReader) token() (jsontokenizer.TokType, error) {
