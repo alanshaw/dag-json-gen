@@ -27,7 +27,7 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.BoolPtr (bool) (bool)
 	if len("BoolPtr") > 8192 {
@@ -48,8 +48,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 			return fmt.Errorf("writing bool for field t.BoolPtr: %w", err)
 		}
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -71,8 +71,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Dog)); err != nil {
 		return fmt.Errorf("writing string for field t.Dog: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -99,8 +99,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -139,8 +139,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.Others: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -161,8 +161,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.SixtyThreeBitIntegerWithASignBit: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -190,8 +190,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 			return fmt.Errorf("writing string for field t.StringPtr: %w", err)
 		}
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -210,8 +210,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 	if err := t.Stuff.MarshalDagJSON(jw); err != nil {
 		return fmt.Errorf("marshaling field t.Stuff: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -230,8 +230,8 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 	if err := t.Stufff.MarshalDagJSON(jw); err != nil {
 		return fmt.Errorf("marshaling field t.Stufff: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -273,7 +273,6 @@ func (t *SimpleTypeTree) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.Test: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -638,7 +637,7 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.OldArray ([]testing.SimpleTypeOne) (slice)
 	if len("OldArray") > 8192 {
@@ -671,8 +670,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.OldArray: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -696,8 +695,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing bytes for field t.OldBytes: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -736,8 +735,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.OldCidArray: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -782,8 +781,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.OldCidPtrArray: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -839,8 +838,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -861,8 +860,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing uint64 for field t.OldNum: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -889,8 +888,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -912,8 +911,8 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.OldStr)); err != nil {
 		return fmt.Errorf("writing string for field t.OldStr: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -932,7 +931,6 @@ func (t *SimpleStructV1) MarshalDagJSON(w io.Writer) error {
 	if err := t.OldStruct.MarshalDagJSON(jw); err != nil {
 		return fmt.Errorf("marshaling field t.OldStruct: %w", err)
 	}
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -1246,7 +1244,7 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.NewArray ([]testing.SimpleTypeOne) (slice)
 	if len("NewArray") > 8192 {
@@ -1279,8 +1277,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.NewArray: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1304,8 +1302,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing bytes for field t.NewBytes: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1361,8 +1359,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1383,8 +1381,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing uint64 for field t.NewNum: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1411,8 +1409,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1434,8 +1432,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.NewStr)); err != nil {
 		return fmt.Errorf("writing string for field t.NewStr: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1454,8 +1452,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 	if err := t.NewStruct.MarshalDagJSON(jw); err != nil {
 		return fmt.Errorf("marshaling field t.NewStruct: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1492,8 +1490,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.OldArray: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1517,8 +1515,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing bytes for field t.OldBytes: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1574,8 +1572,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1596,8 +1594,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing uint64 for field t.OldNum: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1624,8 +1622,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 		}
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1647,8 +1645,8 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.OldStr)); err != nil {
 		return fmt.Errorf("writing string for field t.OldStr: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -1667,7 +1665,6 @@ func (t *SimpleStructV2) MarshalDagJSON(w io.Writer) error {
 	if err := t.OldStruct.MarshalDagJSON(jw); err != nil {
 		return fmt.Errorf("marshaling field t.OldStruct: %w", err)
 	}
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -2040,7 +2037,7 @@ func (t *RenamedFields) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.Bar (string) (string)
 	if len("beep") > 8192 {
@@ -2058,8 +2055,8 @@ func (t *RenamedFields) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Bar)); err != nil {
 		return fmt.Errorf("writing string for field t.Bar: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2080,7 +2077,6 @@ func (t *RenamedFields) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Foo: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -2175,7 +2171,7 @@ func (t *TestEmpty) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.Beep (string) (string)
 	if t.Beep != "" {
@@ -2194,9 +2190,9 @@ func (t *TestEmpty) MarshalDagJSON(w io.Writer) error {
 		if err := jw.WriteString(string(t.Beep)); err != nil {
 			return fmt.Errorf("writing string for field t.Beep: %w", err)
 		}
-		written++
+		written = true
 	}
-	if written > 0 {
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2217,9 +2213,9 @@ func (t *TestEmpty) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Cat: %w", err)
 	}
 
-	written++
+	written = true
 	if t.Foo != nil {
-		if written > 0 {
+		if written {
 			if err := jw.WriteComma(); err != nil {
 				return err
 			}
@@ -2249,7 +2245,6 @@ func (t *TestEmpty) MarshalDagJSON(w io.Writer) error {
 				return fmt.Errorf("writing string for field t.Foo: %w", err)
 			}
 		}
-		written++
 	}
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
@@ -2360,7 +2355,7 @@ func (t *TestConstField) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.Cats (string) (string)
 	if len("Cats") > 8192 {
@@ -2375,8 +2370,8 @@ func (t *TestConstField) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString("dogsdrool"); err != nil {
 		return err
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2397,7 +2392,6 @@ func (t *TestConstField) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Thing: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -2492,7 +2486,7 @@ func (t *TestCanonicalFieldOrder) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.Drond (int64) (int64)
 	if len("Drond") > 8192 {
@@ -2509,8 +2503,8 @@ func (t *TestCanonicalFieldOrder) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Drond: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2532,8 +2526,8 @@ func (t *TestCanonicalFieldOrder) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Zp)); err != nil {
 		return fmt.Errorf("writing string for field t.Zp: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2555,8 +2549,8 @@ func (t *TestCanonicalFieldOrder) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Bar)); err != nil {
 		return fmt.Errorf("writing string for field t.Bar: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2577,7 +2571,6 @@ func (t *TestCanonicalFieldOrder) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Foo: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -2874,7 +2867,7 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.Beep (int64) (int64)
 	if len("Beep") > 8192 {
@@ -2891,8 +2884,8 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Beep: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2914,8 +2907,8 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Cat)); err != nil {
 		return fmt.Errorf("writing string for field t.Cat: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2962,8 +2955,8 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -2995,8 +2988,8 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -3020,8 +3013,8 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing bytes for field t.Other: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -3060,7 +3053,6 @@ func (t *TestSliceNilPreserve) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.Stuff: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -3285,7 +3277,7 @@ func (t *StringPtrSlices) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.StringPtrs ([]*string) (slice)
 	if len("StringPtrs") > 8192 {
@@ -3327,8 +3319,8 @@ func (t *StringPtrSlices) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.StringPtrs: %w", err)
 	}
 
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -3368,7 +3360,6 @@ func (t *StringPtrSlices) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing array close for field t.Strings: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}
@@ -3534,7 +3525,7 @@ func (t *FieldNameOverlap) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteObjectOpen(); err != nil {
 		return err
 	}
-	written := 0
+	written := false
 
 	// t.LongerNamedField (string) (string)
 	if len("LongerNamedField") > 8192 {
@@ -3552,8 +3543,8 @@ func (t *FieldNameOverlap) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.LongerNamedField)); err != nil {
 		return fmt.Errorf("writing string for field t.LongerNamedField: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -3575,8 +3566,8 @@ func (t *FieldNameOverlap) MarshalDagJSON(w io.Writer) error {
 	if err := jw.WriteString(string(t.Bar)); err != nil {
 		return fmt.Errorf("writing string for field t.Bar: %w", err)
 	}
-	written++
-	if written > 0 {
+	written = true
+	if written {
 		if err := jw.WriteComma(); err != nil {
 			return err
 		}
@@ -3597,7 +3588,6 @@ func (t *FieldNameOverlap) MarshalDagJSON(w io.Writer) error {
 		return fmt.Errorf("writing int64 for field t.Foo: %w", err)
 	}
 
-	written++
 	if err := jw.WriteObjectClose(); err != nil {
 		return err
 	}

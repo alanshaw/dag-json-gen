@@ -1621,7 +1621,7 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 	})
 
 	if len(gti.Fields) > 1 {
-		if _, err := fmt.Fprintf(w, "\nwritten := 0"); err != nil {
+		if _, err := fmt.Fprintf(w, "\nwritten := false"); err != nil {
 			return err
 		}
 	}
@@ -1637,7 +1637,7 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			}
 			// write a comma so long as there was a previous field that was written
 			if _, err := fmt.Fprintf(w, `
-			if written > 0 {
+			if written {
 				if err := jw.WriteComma(); err != nil {
 					return err
 				}
@@ -1714,9 +1714,9 @@ func (g Gen) emitDagJsonMarshalStructMap(w io.Writer, gti *GenTypeInfo) error {
 			return fmt.Errorf("field %q of %q has unsupported kind %q", f.Name, gti.Name, f.Type.Kind())
 		}
 
-		if len(gti.Fields) > 1 {
+		if i < len(gti.Fields)-1 {
 			if err := g.doTemplate(w, f, `
-			written++`); err != nil {
+			written = true`); err != nil {
 				return err
 			}
 		}
