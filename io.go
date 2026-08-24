@@ -3,12 +3,12 @@ package typegen
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"strconv"
+	"unicode/utf8"
 
 	cid "github.com/ipfs/go-cid"
 	"pitr.ca/jsontokenizer"
@@ -16,8 +16,19 @@ import (
 
 var _ io.Writer = (*DagJsonWriter)(nil)
 
+var (
+	litTrue       = []byte("true")
+	litFalse      = []byte("false")
+	litNull       = []byte("null")
+	litCidOpen    = []byte(`{"/":"`)
+	litCidClose   = []byte(`"}`)
+	litBytesOpen  = []byte(`{"/":{"bytes":"`)
+	litBytesClose = []byte(`"}}`)
+)
+
 type DagJsonWriter struct {
-	w io.Writer
+	w       io.Writer
+	scratch [256]byte
 }
 
 func (d *DagJsonWriter) Write(p []byte) (n int, err error) {
@@ -28,101 +39,148 @@ func NewDagJsonWriter(w io.Writer) *DagJsonWriter {
 	if jw, ok := w.(*DagJsonWriter); ok {
 		return jw
 	}
-	return &DagJsonWriter{w}
+	return &DagJsonWriter{w: w}
+}
+
+func (d *DagJsonWriter) writeByte(c byte) error {
+	d.scratch[0] = c
+	_, err := d.w.Write(d.scratch[:1])
+	return err
 }
 
 func (d *DagJsonWriter) WriteArrayClose() error {
-	_, err := fmt.Fprintf(d.w, "]")
-	return err
+	return d.writeByte(']')
 }
 
 func (d *DagJsonWriter) WriteArrayOpen() error {
-	_, err := fmt.Fprintf(d.w, "[")
-	return err
+	return d.writeByte('[')
 }
 
 func (d *DagJsonWriter) WriteBigInt(n *big.Int) error {
-	_, err := fmt.Fprintf(d.w, `%s`, n.String())
+	_, err := d.w.Write(n.Append(d.scratch[:0], 10))
 	return err
 }
 
 func (d *DagJsonWriter) WriteBool(b bool) error {
-	_, err := fmt.Fprintf(d.w, `%t`, b)
+	var err error
+	if b {
+		_, err = d.w.Write(litTrue)
+	} else {
+		_, err = d.w.Write(litFalse)
+	}
 	return err
 }
 
 func (d *DagJsonWriter) WriteBytes(b []byte) error {
-	_, err := fmt.Fprintf(d.w, `{"/":{"bytes":"%s"}}`, base64.RawStdEncoding.EncodeToString(b))
+	if _, err := d.w.Write(litBytesOpen); err != nil {
+		return err
+	}
+	if _, err := d.w.Write(base64.RawStdEncoding.AppendEncode(d.scratch[:0], b)); err != nil {
+		return err
+	}
+	_, err := d.w.Write(litBytesClose)
 	return err
 }
 
 func (d *DagJsonWriter) WriteCid(c cid.Cid) error {
-	_, err := fmt.Fprintf(d.w, `{"/":"%s"}`, c)
+	if _, err := d.w.Write(litCidOpen); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(d.w, c.String()); err != nil {
+		return err
+	}
+	_, err := d.w.Write(litCidClose)
 	return err
 }
 
 func (d *DagJsonWriter) WriteComma() error {
-	_, err := fmt.Fprintf(d.w, ",")
-	return err
+	return d.writeByte(',')
 }
 
 func (d *DagJsonWriter) WriteInt64(n int64) error {
-	_, err := fmt.Fprintf(d.w, "%d", n)
+	_, err := d.w.Write(strconv.AppendInt(d.scratch[:0], n, 10))
 	return err
 }
 
 func (d *DagJsonWriter) WriteNull() error {
-	_, err := fmt.Fprintf(d.w, "null")
+	_, err := d.w.Write(litNull)
 	return err
 }
 
 func (d *DagJsonWriter) WriteObjectClose() error {
-	_, err := fmt.Fprintf(d.w, "}")
-	return err
+	return d.writeByte('}')
 }
 
 func (d *DagJsonWriter) WriteObjectColon() error {
-	_, err := fmt.Fprintf(d.w, ":")
-	return err
+	return d.writeByte(':')
 }
 
 func (d *DagJsonWriter) WriteObjectOpen() error {
-	_, err := fmt.Fprintf(d.w, "{")
-	return err
+	return d.writeByte('{')
+}
+
+// isPlainJSONString reports whether json.Marshal would output s verbatim
+// between quotes: no control chars, quotes or backslashes, no HTML chars
+// (json.Marshal escapes < > & as \uXXXX) and no non-ASCII (json.Marshal
+// escapes U+2028/U+2029 and replaces invalid UTF-8).
+func isPlainJSONString(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < 0x20 || c >= 0x7f || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
+			return false
+		}
+	}
+	return true
 }
 
 func (d *DagJsonWriter) WriteString(s string) error {
-	buf, err := json.Marshal(s)
-	if err != nil {
-		return fmt.Errorf("writing JSON string: %w", err)
+	if isPlainJSONString(s) {
+		if err := d.writeByte('"'); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(d.w, s); err != nil {
+			return err
+		}
+		return d.writeByte('"')
 	}
-	_, err = d.w.Write(buf)
-	return err
+	return d.writeEscapedJSONString(s)
 }
 
 func (d *DagJsonWriter) WriteUint8(n uint8) error {
-	_, err := fmt.Fprintf(d.w, "%d", n)
+	_, err := d.w.Write(strconv.AppendUint(d.scratch[:0], uint64(n), 10))
 	return err
 }
 
 func (d *DagJsonWriter) WriteUint64(n uint64) error {
-	_, err := fmt.Fprintf(d.w, "%d", n)
+	_, err := d.w.Write(strconv.AppendUint(d.scratch[:0], n, 10))
 	return err
 }
 
 var _ io.Reader = (*DagJsonReader)(nil)
 
 type DagJsonReader struct {
-	r    io.Reader
-	tk   jsontokenizer.Tokenizer
-	peek jsontokenizer.TokType
+	r       io.Reader
+	tk      jsontokenizer.Tokenizer
+	peek    jsontokenizer.TokType
+	scratch bytes.Buffer
+	lw      LimitedWriter
+	strBuf  []byte
 }
 
 func NewDagJsonReader(r io.Reader) *DagJsonReader {
 	if jr, ok := r.(*DagJsonReader); ok {
 		return jr
 	}
-	return &DagJsonReader{r, jsontokenizer.New(r), -1}
+	return &DagJsonReader{r: r, tk: jsontokenizer.New(r), peek: -1}
+}
+
+// limitScratch resets the reusable scratch buffer and returns a writer into
+// it that permits at most n bytes. Data written to it is only valid until the
+// next limitScratch call — copy it out before reading further.
+func (d *DagJsonReader) limitScratch(n int) *LimitedWriter {
+	d.scratch.Reset()
+	d.lw = LimitedWriter{&d.scratch, n}
+	return &d.lw
 }
 
 func (d *DagJsonReader) token() (jsontokenizer.TokType, error) {
@@ -437,11 +495,10 @@ func (d *DagJsonReader) ReadNumberAsString(maxLength int) (string, error) {
 	if tok != jsontokenizer.TokNumber {
 		return "", fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
-	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadNumber(d.limitScratch(maxLength)); err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return d.scratch.String(), nil
 }
 
 func (d *DagJsonReader) ReadNumberAsUint8() (uint8, error) {
@@ -452,11 +509,10 @@ func (d *DagJsonReader) ReadNumberAsUint8() (uint8, error) {
 	if tok != jsontokenizer.TokNumber {
 		return 0, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
-	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 3)); err != nil {
+	if _, err := d.tk.ReadNumber(d.limitScratch(3)); err != nil {
 		return 0, err
 	}
-	n, err := strconv.ParseUint(buf.String(), 10, 8)
+	n, err := strconv.ParseUint(d.scratch.String(), 10, 8)
 	if err != nil {
 		return 0, err
 	}
@@ -485,11 +541,10 @@ func (d *DagJsonReader) ReadNumberAsInt64OrNull() (*int64, error) {
 	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
-	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 20)); err != nil {
+	if _, err := d.tk.ReadNumber(d.limitScratch(20)); err != nil {
 		return nil, err
 	}
-	n, err := strconv.ParseInt(buf.String(), 10, 64)
+	n, err := strconv.ParseInt(d.scratch.String(), 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -518,11 +573,10 @@ func (d *DagJsonReader) ReadNumberAsUint64OrNull() (*uint64, error) {
 	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
-	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, 20)); err != nil {
+	if _, err := d.tk.ReadNumber(d.limitScratch(20)); err != nil {
 		return nil, err
 	}
-	n, err := strconv.ParseUint(buf.String(), 10, 64)
+	n, err := strconv.ParseUint(d.scratch.String(), 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -537,11 +591,10 @@ func (d *DagJsonReader) ReadNumberAsBigInt(maxLength int) (*big.Int, error) {
 	if tok != jsontokenizer.TokNumber {
 		return nil, fmt.Errorf("expected number but read %s", tokenName(tok))
 	}
-	var buf bytes.Buffer
-	if _, err := d.tk.ReadNumber(NewLimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadNumber(d.limitScratch(maxLength)); err != nil {
 		return nil, err
 	}
-	n, ok := big.NewInt(0).SetString(buf.String(), 10)
+	n, ok := big.NewInt(0).SetString(d.scratch.String(), 10)
 	if !ok {
 		return nil, errors.New("failed to set big int value")
 	}
@@ -571,17 +624,22 @@ func (d *DagJsonReader) ReadStringOrNull(maxLength int) (*string, error) {
 		return nil, fmt.Errorf("expected string but read %s", tokenName(tok))
 	}
 
-	var buf bytes.Buffer
-	buf.Write([]byte(`"`))
-	if _, err := d.tk.ReadString(NewLimitWriter(&buf, maxLength)); err != nil {
+	if _, err := d.tk.ReadString(d.limitScratch(maxLength)); err != nil {
 		return nil, err
 	}
-	buf.Write([]byte(`"`))
-	var s string
-	err = json.Unmarshal(buf.Bytes(), &s)
+	// The tokenizer emits the raw, still-escaped string content: when it
+	// contains no escape sequences (and is valid UTF-8, which json.Unmarshal
+	// would otherwise sanitize) it is the literal string value.
+	raw := d.scratch.Bytes()
+	if bytes.IndexByte(raw, '\\') < 0 && utf8.Valid(raw) {
+		s := string(raw)
+		return &s, nil
+	}
+	d.strBuf, err = unescapeJSONString(d.strBuf[:0], raw)
 	if err != nil {
 		return nil, fmt.Errorf("reading JSON string: %w", err)
 	}
+	s := string(d.strBuf)
 	return &s, nil
 }
 

@@ -2,7 +2,6 @@ package typegen
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -35,7 +34,9 @@ func (d *Deferred) UnmarshalDagJSON(r io.Reader) error {
 }
 
 func parse(r io.Reader, w io.Writer) error {
+	// no-ops when r/w are already wrapped, so recursion reuses one instance
 	jr := NewDagJsonReader(r)
+	jw := NewDagJsonWriter(w)
 	typ, err := jr.PeekType()
 	if err != nil {
 		return err
@@ -45,7 +46,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err := jr.ReadObjectOpen(); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, `{`); err != nil {
+		if err := jw.WriteObjectOpen(); err != nil {
 			return err
 		}
 		for {
@@ -65,10 +66,13 @@ func parse(r io.Reader, w io.Writer) error {
 				if err := jr.ReadObjectColon(); err != nil {
 					return err
 				}
-				if _, err := fmt.Fprintf(w, `"%s":`, k); err != nil {
+				if err := jw.WriteString(k); err != nil {
 					return err
 				}
-				if err := parse(jr, w); err != nil {
+				if err := jw.WriteObjectColon(); err != nil {
+					return err
+				}
+				if err := parse(jr, jw); err != nil {
 					return err
 				}
 				close, err = jr.ReadObjectCloseOrComma()
@@ -77,12 +81,12 @@ func parse(r io.Reader, w io.Writer) error {
 				}
 			}
 			if close {
-				if _, err := fmt.Fprintf(w, `}`); err != nil {
+				if err := jw.WriteObjectClose(); err != nil {
 					return err
 				}
 				break
 			}
-			if _, err := fmt.Fprintf(w, `,`); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
@@ -90,7 +94,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err := jr.ReadArrayOpen(); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, `[`); err != nil {
+		if err := jw.WriteArrayOpen(); err != nil {
 			return err
 		}
 		for {
@@ -103,7 +107,7 @@ func parse(r io.Reader, w io.Writer) error {
 					return err
 				}
 			} else {
-				if err := parse(jr, w); err != nil {
+				if err := parse(jr, jw); err != nil {
 					return err
 				}
 				close, err = jr.ReadArrayCloseOrComma()
@@ -112,12 +116,12 @@ func parse(r io.Reader, w io.Writer) error {
 				}
 			}
 			if close {
-				if _, err := fmt.Fprintf(w, `]`); err != nil {
+				if err := jw.WriteArrayClose(); err != nil {
 					return err
 				}
 				break
 			}
-			if _, err := fmt.Fprintf(w, `,`); err != nil {
+			if err := jw.WriteComma(); err != nil {
 				return err
 			}
 		}
@@ -126,7 +130,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, "%s", n); err != nil {
+		if _, err := io.WriteString(jw, n); err != nil {
 			return err
 		}
 	case "string":
@@ -134,11 +138,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		ms, err := json.Marshal(s)
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(ms); err != nil {
+		if err := jw.WriteString(s); err != nil {
 			return err
 		}
 	case "boolean":
@@ -146,14 +146,14 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, "%t", b); err != nil {
+		if err := jw.WriteBool(b); err != nil {
 			return err
 		}
 	case "null":
 		if err := jr.ReadNull(); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(w, "null"); err != nil {
+		if err := jw.WriteNull(); err != nil {
 			return err
 		}
 	default:
