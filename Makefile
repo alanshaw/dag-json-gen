@@ -6,3 +6,7 @@ gentest:
 test: gentest
 	go test ./...
 .PHONY: test
+
+bench: gentest
+	go test -bench=. -run='^$$' ./...
+.PHONY: bench

@@ -13,7 +13,7 @@ import (
 
 func BenchmarkMarshaling(b *testing.B) {
 	r := rand.New(rand.NewSource(56887))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
+	val, ok := quick.Value(reflect.TypeFor[SimpleTypeTwo](), r)
 	if !ok {
 		b.Fatal("failed to construct type")
 	}
@@ -21,9 +21,8 @@ func BenchmarkMarshaling(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTwo)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := tt.MarshalDagJSON(io.Discard); err != nil {
 			b.Fatal(err)
 		}
@@ -32,7 +31,7 @@ func BenchmarkMarshaling(b *testing.B) {
 
 func BenchmarkUnmarshaling(b *testing.B) {
 	r := rand.New(rand.NewSource(123456))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
+	val, ok := quick.Value(reflect.TypeFor[SimpleTypeTwo](), r)
 	if !ok {
 		b.Fatal("failed to construct type")
 	}
@@ -47,9 +46,8 @@ func BenchmarkUnmarshaling(b *testing.B) {
 	reader := bytes.NewReader(buf.Bytes())
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		reader.Seek(0, io.SeekStart)
 		var tt SimpleTypeTwo
 		if err := tt.UnmarshalDagJSON(reader); err != nil {
@@ -58,27 +56,9 @@ func BenchmarkUnmarshaling(b *testing.B) {
 	}
 }
 
-func BenchmarkLinkScan(b *testing.B) {
-	r := rand.New(rand.NewSource(123456))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
-	if !ok {
-		b.Fatal("failed to construct type")
-	}
-
-	tt := val.Interface().(SimpleTypeTwo)
-
-	buf := new(bytes.Buffer)
-	if err := tt.MarshalDagJSON(buf); err != nil {
-		b.Fatal(err)
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-}
-
 func BenchmarkDeferred(b *testing.B) {
 	r := rand.New(rand.NewSource(123456))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTwo{}), r)
+	val, ok := quick.Value(reflect.TypeFor[SimpleTypeTwo](), r)
 	if !ok {
 		b.Fatal("failed to construct type")
 	}
@@ -96,9 +76,8 @@ func BenchmarkDeferred(b *testing.B) {
 	)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		reader.Seek(0, io.SeekStart)
 		if err := deferred.UnmarshalDagJSON(reader); err != nil {
 			b.Fatal(err)
@@ -108,7 +87,7 @@ func BenchmarkDeferred(b *testing.B) {
 
 func BenchmarkMapMarshaling(b *testing.B) {
 	r := rand.New(rand.NewSource(56887))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTree{}), r)
+	val, ok := quick.Value(reflect.TypeFor[SimpleTypeTree](), r)
 	if !ok {
 		b.Fatal("failed to construct type")
 	}
@@ -116,9 +95,8 @@ func BenchmarkMapMarshaling(b *testing.B) {
 	tt := val.Interface().(SimpleTypeTree)
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := tt.MarshalDagJSON(io.Discard); err != nil {
 			b.Fatal(err)
 		}
@@ -127,7 +105,7 @@ func BenchmarkMapMarshaling(b *testing.B) {
 
 func BenchmarkMapUnmarshaling(b *testing.B) {
 	r := rand.New(rand.NewSource(123456))
-	val, ok := quick.Value(reflect.TypeOf(SimpleTypeTree{}), r)
+	val, ok := quick.Value(reflect.TypeFor[SimpleTypeTree](), r)
 	if !ok {
 		b.Fatal("failed to construct type")
 	}
@@ -142,9 +120,8 @@ func BenchmarkMapUnmarshaling(b *testing.B) {
 	reader := bytes.NewReader(buf.Bytes())
 
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		reader.Seek(0, io.SeekStart)
 		var tt SimpleTypeTree
 		if err := tt.UnmarshalDagJSON(reader); err != nil {
