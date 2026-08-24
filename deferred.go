@@ -130,7 +130,7 @@ func parse(r io.Reader, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := io.WriteString(jw, n); err != nil {
+		if err := jw.writeRawString(n); err != nil {
 			return err
 		}
 	case "string":

@@ -48,6 +48,20 @@ func (d *DagJsonWriter) writeByte(c byte) error {
 	return err
 }
 
+// writeRawString writes s verbatim, copying through the scratch array so no
+// []byte(s) conversion is allocated when the underlying writer does not
+// implement io.StringWriter.
+func (d *DagJsonWriter) writeRawString(s string) error {
+	for len(s) > 0 {
+		k := copy(d.scratch[:], s)
+		if _, err := d.w.Write(d.scratch[:k]); err != nil {
+			return err
+		}
+		s = s[k:]
+	}
+	return nil
+}
+
 func (d *DagJsonWriter) WriteArrayClose() error {
 	return d.writeByte(']')
 }
@@ -86,7 +100,7 @@ func (d *DagJsonWriter) WriteCid(c cid.Cid) error {
 	if _, err := d.w.Write(litCidOpen); err != nil {
 		return err
 	}
-	if _, err := io.WriteString(d.w, c.String()); err != nil {
+	if err := d.writeRawString(c.String()); err != nil {
 		return err
 	}
 	_, err := d.w.Write(litCidClose)
@@ -138,7 +152,7 @@ func (d *DagJsonWriter) WriteString(s string) error {
 		if err := d.writeByte('"'); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(d.w, s); err != nil {
+		if err := d.writeRawString(s); err != nil {
 			return err
 		}
 		return d.writeByte('"')
