@@ -99,9 +99,7 @@ func (t *LimitedStruct) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field LimitedStruct: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field LimitedStruct: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 3")
 	} else {
 
 		// t.Arr ([]uint64) (slice)

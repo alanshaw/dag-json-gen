@@ -220,3 +220,8 @@ type TupleWithOptionalFields struct {
 	Int3  int64 `dagjsongen:"optional"`
 	Int4  int64 `dagjsongen:"optional"`
 }
+
+type TupleAllOptionalFields struct {
+	Int1 int64 `dagjsongen:"optional"`
+	Int2 int64 `dagjsongen:"optional"`
+}

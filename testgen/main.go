@@ -23,6 +23,7 @@ func main() {
 		types.MapTransparentType{},
 		types.BigIntContainer{},
 		types.TupleWithOptionalFields{},
+		types.TupleAllOptionalFields{},
 	); err != nil {
 		panic(err)
 	}

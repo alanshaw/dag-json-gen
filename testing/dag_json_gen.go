@@ -75,9 +75,7 @@ func (t *SignedArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field SignedArray: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field SignedArray: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 1")
 	} else {
 
 		// t.Signed ([]uint64) (slice)
@@ -245,9 +243,7 @@ func (t *SimpleTypeOne) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field SimpleTypeOne: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field SimpleTypeOne: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 6")
 	} else {
 
 		// t.Foo (string) (string)
@@ -633,9 +629,7 @@ func (t *SimpleTypeTwo) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field SimpleTypeTwo: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field SimpleTypeTwo: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 9")
 	} else {
 
 		// t.Stuff (testing.SimpleTypeTwo) (struct)
@@ -1048,9 +1042,7 @@ func (t *DeferredContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field DeferredContainer: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field DeferredContainer: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 3")
 	} else {
 
 		// t.Stuff (testing.SimpleTypeOne) (struct)
@@ -1194,9 +1186,7 @@ func (t *FixedArrays) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field FixedArrays: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field FixedArrays: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 3")
 	} else {
 
 		// t.Bytes ([20]uint8) (array)
@@ -1330,9 +1320,7 @@ func (t *ThingWithSomeTime) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field ThingWithSomeTime: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field ThingWithSomeTime: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 3")
 	} else {
 
 		// t.When (typegen.DagJsonTime) (struct)
@@ -1433,9 +1421,7 @@ func (t *BigField) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field BigField: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field BigField: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 1")
 	} else {
 
 		// t.LargeBytes ([]uint8) (slice)
@@ -1685,9 +1671,7 @@ func (t *TupleIntArray) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field TupleIntArray: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field TupleIntArray: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 3")
 	} else {
 
 		// t.Int1 (int64) (int64)
@@ -1831,9 +1815,7 @@ func (t *TupleIntArrayOptionals) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field TupleIntArrayOptionals: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field TupleIntArrayOptionals: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 4")
 	} else {
 
 		// t.Int1 (int64) (int64)
@@ -2243,9 +2225,7 @@ func (t *BigIntContainer) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field BigIntContainer: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field BigIntContainer: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 1")
 	} else {
 
 		// t.Int (big.Int) (struct)
@@ -2336,9 +2316,7 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field TupleWithOptionalFields: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field TupleWithOptionalFields: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 2")
 	} else {
 
 		// t.Int1 (int64) (int64)
@@ -2417,6 +2395,99 @@ func (t *TupleWithOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
 		}
 		if err := jr.ReadArrayClose(); err != nil {
 			return fmt.Errorf("reading array close for field TupleWithOptionalFields: %w", err)
+		}
+	}
+	return nil
+}
+
+func (t *TupleAllOptionalFields) MarshalDagJSON(w io.Writer) error {
+	jw := jsg.NewDagJsonWriter(w)
+	if t == nil {
+		err := jw.WriteNull()
+		return err
+	}
+	if err := jw.WriteArrayOpen(); err != nil {
+		return fmt.Errorf("writing array open for field TupleAllOptionalFields: %w", err)
+	}
+
+	// t.Int1 (int64) (int64)
+
+	if err := jw.WriteInt64(int64(t.Int1)); err != nil {
+		return fmt.Errorf("writing int64 for field t.Int1: %w", err)
+	}
+
+	if err := jw.WriteComma(); err != nil {
+		return fmt.Errorf("writing comma for field Int2: %w", err)
+	}
+
+	// t.Int2 (int64) (int64)
+
+	if err := jw.WriteInt64(int64(t.Int2)); err != nil {
+		return fmt.Errorf("writing int64 for field t.Int2: %w", err)
+	}
+
+	if err := jw.WriteArrayClose(); err != nil {
+		return fmt.Errorf("writing array close for field TupleAllOptionalFields: %w", err)
+	}
+	return nil
+}
+
+func (t *TupleAllOptionalFields) UnmarshalDagJSON(r io.Reader) (err error) {
+	*t = TupleAllOptionalFields{}
+
+	jr := jsg.NewDagJsonReader(r)
+	defer func() {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+	}()
+	if err := jr.ReadArrayOpen(); err != nil {
+		return fmt.Errorf("reading array open for field TupleAllOptionalFields: %w", err)
+	}
+	close, err := jr.PeekArrayClose()
+	if err != nil {
+		return fmt.Errorf("peeking array close for field TupleAllOptionalFields: %w", err)
+	}
+	if close {
+		if err := jr.ReadArrayClose(); err != nil {
+			return fmt.Errorf("reading array close for field TupleAllOptionalFields: %w", err)
+		}
+	} else {
+
+		// t.Int1 (int64) (int64)
+
+		{
+
+			nval, err := jr.ReadNumberAsInt64()
+			if err != nil {
+				return fmt.Errorf("reading int64 for field t.Int1: %w", err)
+			}
+			t.Int1 = int64(nval)
+
+		}
+		{
+			close, err := jr.ReadArrayCloseOrComma()
+			if err != nil {
+				return fmt.Errorf("reading array close or comma for field TupleAllOptionalFields: %w", err)
+			}
+			if close {
+				return nil
+			}
+		}
+
+		// t.Int2 (int64) (int64)
+
+		{
+
+			nval, err := jr.ReadNumberAsInt64()
+			if err != nil {
+				return fmt.Errorf("reading int64 for field t.Int2: %w", err)
+			}
+			t.Int2 = int64(nval)
+
+		}
+		if err := jr.ReadArrayClose(); err != nil {
+			return fmt.Errorf("reading array close for field TupleAllOptionalFields: %w", err)
 		}
 	}
 	return nil
