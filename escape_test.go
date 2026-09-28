@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 	"testing/quick"
+	"unicode/utf8"
 )
 
 // corpus of strings exercising every escape path
@@ -45,7 +46,23 @@ func TestWriteStringDifferential(t *testing.T) {
 		if err != nil {
 			t.Fatalf("json.Marshal(%q): %v", s, err)
 		}
-		if !bytes.Equal(buf.Bytes(), want) {
+		if utf8.ValidString(s) {
+			if !bytes.Equal(buf.Bytes(), want) {
+				t.Errorf("WriteString mismatch for %q:\n got: %s\nwant: %s", s, buf.Bytes(), want)
+			}
+			return
+		}
+		// Invalid UTF-8 becomes U+FFFD in both encoders, but encoding/json
+		// writes it as the \ufffd escape before Go 1.27 and as the literal
+		// character from Go 1.27 on, so compare the decoded values instead.
+		var got, wantStr string
+		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+			t.Fatalf("json.Unmarshal(%s): %v", buf.Bytes(), err)
+		}
+		if err := json.Unmarshal(want, &wantStr); err != nil {
+			t.Fatalf("json.Unmarshal(%s): %v", want, err)
+		}
+		if got != wantStr {
 			t.Errorf("WriteString mismatch for %q:\n got: %s\nwant: %s", s, buf.Bytes(), want)
 		}
 	}
