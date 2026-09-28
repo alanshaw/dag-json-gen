@@ -3,15 +3,14 @@ package testing
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 )
 
 func TestOptionalFields(t *testing.T) {
 	ints := []int64{1, 2, 3, 4, 5}
 
-	objects := make([][]byte, 5)
-	for i := range objects {
-		count := i + 1
+	for count := 0; count <= 5; count++ {
 		t.Run(fmt.Sprintf("length-%d", count), func(t *testing.T) {
 			var buf bytes.Buffer
 			obj := IntArray{Ints: ints[:count]}
@@ -72,4 +71,38 @@ func TestOptionalFields(t *testing.T) {
 		})
 	}
 
+}
+
+func TestEmptyTuple(t *testing.T) {
+	t.Run("rejected when fields are mandatory", func(t *testing.T) {
+		out := TupleIntArray{Int1: 0xf1}
+		err := out.UnmarshalDagJSON(strings.NewReader("[]"))
+		if err == nil {
+			t.Fatal("expected an error when unmarshaling an empty array into a tuple with mandatory fields")
+		}
+		if !strings.Contains(err.Error(), "too few fields 0 < 3") {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+
+	t.Run("rejected when a mandatory prefix exists", func(t *testing.T) {
+		var out TupleWithOptionalFields
+		err := out.UnmarshalDagJSON(strings.NewReader("[]"))
+		if err == nil {
+			t.Fatal("expected an error when unmarshaling an empty array into a tuple with a mandatory prefix")
+		}
+		if !strings.Contains(err.Error(), "too few fields 0 < 2") {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+
+	t.Run("accepted when all fields are optional", func(t *testing.T) {
+		out := TupleAllOptionalFields{Int1: 0xf1, Int2: 0xf2}
+		if err := out.UnmarshalDagJSON(strings.NewReader("[]")); err != nil {
+			t.Fatalf("expected no error when unmarshaling an empty array into an all-optional tuple, got: %s", err)
+		}
+		if out.Int1 != 0 || out.Int2 != 0 {
+			t.Errorf("expected optional fields to be reset to zero, got %+v", out)
+		}
+	})
 }

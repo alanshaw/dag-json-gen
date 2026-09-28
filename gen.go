@@ -1450,9 +1450,13 @@ func (g Gen) emitDagJsonUnmarshalStructTuple(w io.Writer, gti *GenTypeInfo) (err
 				return fmt.Errorf("peeking array close for field {{ .Name | js }}: %w", err)
 			}
 			if close {
+{{- if gt .MandatoryFieldCount 0 }}
+				return fmt.Errorf("json input has too few fields 0 < {{ .MandatoryFieldCount }}")
+{{- else }}
 				if err := jr.ReadArrayClose(); err != nil {
 					return fmt.Errorf("reading array close for field {{ .Name | js }}: %w", err)
 				}
+{{- end }}
 			} else {`)
 	}
 	if err != nil {

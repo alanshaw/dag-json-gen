@@ -58,9 +58,7 @@ func (t *LongString) UnmarshalDagJSON(r io.Reader) (err error) {
 		return fmt.Errorf("peeking array close for field LongString: %w", err)
 	}
 	if close {
-		if err := jr.ReadArrayClose(); err != nil {
-			return fmt.Errorf("reading array close for field LongString: %w", err)
-		}
+		return fmt.Errorf("json input has too few fields 0 < 1")
 	} else {
 
 		// t.Val (string) (string)
