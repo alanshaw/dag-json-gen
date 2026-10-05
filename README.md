@@ -101,7 +101,7 @@ type TransparentExample struct {
 
 ### Upgrading Type Schemas
 
-When working with map-encoded types, all fields are optional when decoding (they default to the field's zero-value) and unknown fields are skipped.
+When working with map-encoded types, all fields are optional when decoding (they default to the field's zero-value) and unknown fields are skipped. Generating with `Gen{DisallowUnknownFields: true}` changes this so that decoding fails on any key that does not match a field.
 
 When working with tuple-encoded types, fields are mandatory by default and unknown (additional) fields will be rejected. However, it's possible to add additional optional fields to the end of the tuple-encoded struct by tagging them as `dagjsongen:"optional"`; this makes it possible to decode a tuple-encoded struct that omits a suffix of the expected fields. On encoding, optional fields will always be included.
 
@@ -111,9 +111,10 @@ You can customize generation parameters using the `Gen` type:
 
 ```go
 err := cbg.Gen{
-	MaxArrayLength:  8192,	// Maximum length for arrays
-	MaxByteLength:   2<<20,   // Maximum length for byte slices
-	MaxStringLength: 2<<20,   // Maximum length for strings
+	MaxArrayLength:  8192,       // Maximum length for arrays
+	MaxByteLength:   2<<20,      // Maximum length for byte slices
+	MaxStringLength: 2<<20,      // Maximum length for strings
+	DisallowUnknownFields: true, // Reject unknown fields in map-style structs
 }.WriteTupleEncodersToFile("dag_json_gen.go", "mypackage",
 	MyType{},
 )

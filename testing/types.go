@@ -225,3 +225,13 @@ type TupleAllOptionalFields struct {
 	Int1 int64 `dagjsongen:"optional"`
 	Int2 int64 `dagjsongen:"optional"`
 }
+
+type StrictFields struct {
+	Foo    int64  `dagjsongen:"foo"`
+	Bar    string `dagjsongen:"beep"`
+	Nested *StrictInner
+}
+
+type StrictInner struct {
+	Baz uint64
+}

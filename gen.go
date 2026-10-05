@@ -35,6 +35,11 @@ type Gen struct {
 
 	// Write output file in order of type names
 	SortTypeNames bool
+
+	// Reject unknown fields when decoding map-style structs instead of
+	// discarding them. Has no effect on tuple-style structs, which already
+	// reject extra elements.
+	DisallowUnknownFields bool
 }
 
 func (g Gen) maxArrayLength() int {
@@ -1838,13 +1843,25 @@ func (g Gen) emitDagJsonUnmarshalStructMap(w io.Writer, gti *GenTypeInfo) error 
 		}
 	}
 
-	return g.doTemplate(w, gti, `
+	if g.DisallowUnknownFields {
+		err = g.doTemplate(w, gti, `
+				default:
+					return fmt.Errorf("unknown field %s for {{ .Name | js }}", name)
+				}`)
+	} else {
+		err = g.doTemplate(w, gti, `
 				default:
 					// Field doesn't exist on this type, so ignore it
 					if err := jr.DiscardType(); err != nil {
 						return fmt.Errorf("ignoring field %s for {{ .Name | js }}: %w", name, err)
 					}
-				}
+				}`)
+	}
+	if err != nil {
+		return err
+	}
+
+	return g.doTemplate(w, gti, `
 
 				close, err := jr.ReadObjectCloseOrComma()
 				if err != nil {

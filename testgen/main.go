@@ -66,4 +66,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = jsg.Gen{DisallowUnknownFields: true}.WriteMapEncodersToFile("testing/dag_json_strict_gen.go", "testing",
+		types.StrictFields{},
+		types.StrictInner{},
+	)
+	if err != nil {
+		panic(err)
+	}
 }

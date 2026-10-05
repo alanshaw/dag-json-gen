@@ -891,3 +891,64 @@ func TestUnmarshalExtraFields(t *testing.T) {
 		t.Fatal("encoding mismatch")
 	}
 }
+
+func TestDisallowUnknownFields(t *testing.T) {
+	t.Run("rejects unknown top-level field", func(t *testing.T) {
+		in := &FieldNameOverlap{
+			LongerNamedField: "some stuff",
+			Foo:              1825,
+			Bar:              "less things",
+		}
+		buf := new(bytes.Buffer)
+		if err := in.MarshalDagJSON(buf); err != nil {
+			t.Fatal(err)
+		}
+
+		var out StrictFields
+		err := out.UnmarshalDagJSON(buf)
+		if err == nil {
+			t.Fatal("expected an error for unknown field")
+		}
+		if !strings.Contains(err.Error(), "LongerNamedField") {
+			t.Fatalf("expected error to name the unknown field, got: %s", err)
+		}
+	})
+
+	t.Run("accepts known fields", func(t *testing.T) {
+		in := &RenamedFields{Foo: 1825, Bar: "less things"}
+		buf := new(bytes.Buffer)
+		if err := in.MarshalDagJSON(buf); err != nil {
+			t.Fatal(err)
+		}
+
+		var out StrictFields
+		if err := out.UnmarshalDagJSON(buf); err != nil {
+			t.Fatal(err)
+		}
+		if out.Foo != in.Foo || out.Bar != in.Bar {
+			t.Fatal("encoding mismatch")
+		}
+	})
+
+	t.Run("rejects unknown nested field", func(t *testing.T) {
+		var out StrictFields
+		err := out.UnmarshalDagJSON(strings.NewReader(`{"foo":1,"beep":"x","Nested":{"Baz":2,"Extra":true}}`))
+		if err == nil {
+			t.Fatal("expected an error for unknown nested field")
+		}
+		if !strings.Contains(err.Error(), "Extra") {
+			t.Fatalf("expected error to name the unknown field, got: %s", err)
+		}
+	})
+
+	t.Run("rejects unknown field as only field", func(t *testing.T) {
+		var out StrictFields
+		err := out.UnmarshalDagJSON(strings.NewReader(`{"nope":1}`))
+		if err == nil {
+			t.Fatal("expected an error for unknown field")
+		}
+		if !strings.Contains(err.Error(), "nope") {
+			t.Fatalf("expected error to name the unknown field, got: %s", err)
+		}
+	})
+}
